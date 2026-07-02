@@ -15,6 +15,7 @@
   const glider = document.getElementById("segment-glider");
   const netBanner = document.getElementById("net-banner");
   const netRetry = document.getElementById("net-retry");
+  const netLukk = document.getElementById("net-lukk");
   const themeToggle = document.getElementById("theme-toggle");
   const iconMoon = document.getElementById("icon-moon");
   const iconSun = document.getElementById("icon-sun");
@@ -116,6 +117,8 @@
 
   /* ---------- Nettsjekk mot dokumentserveren ---------- */
 
+  let bannerLukket = false; // brukeren har lukket varselet manuelt
+
   function probeNett() {
     if (!probeUrl) return;
     const ctrl = new AbortController();
@@ -125,11 +128,16 @@
       .catch(() => { nettStatus = "frakoblet"; })
       .finally(() => {
         clearTimeout(timer);
-        netBanner.classList.toggle("hidden", nettStatus !== "frakoblet");
+        if (nettStatus === "tilkoblet") bannerLukket = false; // nullstill ved friskmelding
+        netBanner.classList.toggle("hidden", nettStatus !== "frakoblet" || bannerLukket);
       });
   }
 
   netRetry.addEventListener("click", probeNett);
+  netLukk.addEventListener("click", () => {
+    bannerLukket = true;
+    netBanner.classList.add("hidden");
+  });
 
   /* ---------- Dokumentvindu ---------- */
 
@@ -210,6 +218,8 @@
 
   function velgProsedyre(p) {
     if (nettStatus === "frakoblet") {
+      // Vis varselet igjen selv om det er lukket – klikket trenger et svar
+      bannerLukket = false;
       netBanner.classList.remove("hidden", "pulse");
       void netBanner.offsetWidth;
       netBanner.classList.add("pulse");
