@@ -336,6 +336,66 @@ body {
   min-width: 0;
 }
 
+.net-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: #fef3cd;
+  color: #6b5518;
+  border-bottom: 1px solid #eadfae;
+  font-size: 13.5px;
+}
+
+[data-theme="dark"] .net-banner {
+  background: #3d3417;
+  color: #ecd88a;
+  border-bottom-color: #57491c;
+}
+
+.net-banner-icon { flex-shrink: 0; }
+.net-banner-text { flex: 1; }
+
+.net-retry {
+  flex-shrink: 0;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.net-retry:hover { opacity: 0.75; }
+
+.offline-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.btn-accent {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.btn-accent:hover { background: var(--accent-strong); }
+
 .viewer-toolbar {
   display: flex;
   align-items: center;

@@ -48,6 +48,16 @@
 
     <!-- Viewer -->
     <main class="viewer">
+      <!-- Varsel når sykehusets dokumentserver ikke nås -->
+      <div id="net-banner" class="net-banner hidden">
+        <span class="net-banner-icon">⚠️</span>
+        <span class="net-banner-text">
+          Ingen kontakt med sykehusets dokumentserver. Prosedyrene kan bare
+          åpnes fra sykehusets nettverk.
+        </span>
+        <button id="net-retry" class="net-retry">Prøv igjen</button>
+      </div>
+
       <div id="viewer-toolbar" class="viewer-toolbar hidden">
         <div class="viewer-title">
           <span id="viewer-category" class="viewer-crumb"></span>
@@ -73,7 +83,21 @@
           <p>Velg en kategori i menyen til venstre, og deretter en prosedyre.<br>Dokumentet åpnes her.</p>
         </div>
 
-        <!-- Ingen søketreff -->
+        <!-- Dokumentserver utilgjengelig -->
+        <div id="offline-state" class="empty-state hidden">
+          <div class="empty-icon">📡</div>
+          <h2>Får ikke kontakt med dokumentserveren</h2>
+          <p>
+            <strong id="offline-procedure"></strong> kan ikke hentes akkurat nå.
+            Prosedyrene ligger på sykehusets interne server og kan bare åpnes
+            fra sykehusets nettverk.
+          </p>
+          <div class="offline-actions">
+            <button id="offline-retry" class="btn-accent">Prøv igjen</button>
+            <a id="offline-external" href="#" target="_blank" rel="noopener" class="btn-ghost">Åpne i ny fane likevel</a>
+          </div>
+        </div>
+
         <div id="loading" class="loading hidden"><div class="spinner"></div><span>Laster dokument …</span></div>
 
         <iframe id="pdf-frame" class="pdf-frame hidden" title="Prosedyredokument"></iframe>

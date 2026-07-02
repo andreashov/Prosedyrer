@@ -22,11 +22,24 @@
   const themeIcon = themeToggle.querySelector(".theme-icon");
   const themeLabel = themeToggle.querySelector(".theme-label");
 
+  const netBanner = document.getElementById("net-banner");
+  const netRetry = document.getElementById("net-retry");
+  const offlineState = document.getElementById("offline-state");
+  const offlineProcedure = document.getElementById("offline-procedure");
+  const offlineRetry = document.getElementById("offline-retry");
+  const offlineExternal = document.getElementById("offline-external");
+
   // Tilstand
   let gruppe = localStorage.getItem("gruppe") || "voksen"; // "voksen" | "barn"
   let openCategories = new Set();
   let activeUrl = null;
   let searchTerm = "";
+  let activeValg = null; // { kat, p } for sist valgte prosedyre
+
+  // Nettstatus mot sykehusets dokumentserver:
+  // "ukjent" | "tilkoblet" | "frakoblet"
+  let nettStatus = "ukjent";
+  let probeUrl = null;
 
   // Modell bygget fra JSON: { voksen: [kategori…], barn: [kategori…] }
   // Hver kategori: { id, navn, ikon, admin, prosedyrer }
@@ -78,9 +91,62 @@
 
   function init(data) {
     buildModel(data);
+    // Bruk første dokument-URL som «puls» mot sykehusets server
+    for (const g of ["voksen", "barn"]) {
+      for (const kat of MODEL[g]) {
+        for (const p of kat.prosedyrer) {
+          if (!probeUrl && p.url.includes("sykehuspartner.no")) probeUrl = p.url;
+        }
+      }
+    }
     if (MODEL[gruppe].length > 0) openCategories.add(MODEL[gruppe][0].id);
     setGruppe(gruppe);
+    probeNett();
+    setInterval(probeNett, 45000); // sjekk jevnlig, f.eks. ved bytte til VPN
   }
+
+  /* ---------- Nettsjekk mot dokumentserveren ----------
+     En HEAD-forespørsel i "no-cors"-modus forteller oss om serveren i det
+     hele tatt svarer: løfter som innfris = serveren nås (vi er på
+     sykehusnettet), nettverksfeil = serveren nås ikke. */
+
+  function probeNett() {
+    if (!probeUrl) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    fetch(probeUrl, { method: "HEAD", mode: "no-cors", cache: "no-store", signal: ctrl.signal })
+      .then(() => { nettStatus = "tilkoblet"; })
+      .catch(() => { nettStatus = "frakoblet"; })
+      .finally(() => {
+        clearTimeout(timer);
+        oppdaterNettUI();
+      });
+  }
+
+  function oppdaterNettUI() {
+    netBanner.classList.toggle("hidden", nettStatus !== "frakoblet");
+    // Hvis en prosedyre er valgt, oppdater visningen i tråd med ny status
+    if (activeValg) {
+      if (nettStatus === "frakoblet") visOffline(activeValg.p);
+      else if (offlineState && !offlineState.classList.contains("hidden")) {
+        // Serveren kom tilbake – prøv å laste dokumentet på nytt
+        openProcedure(activeValg.kat, activeValg.p);
+      }
+    }
+  }
+
+  function visOffline(p) {
+    offlineProcedure.textContent = p.navn;
+    offlineExternal.href = p.url;
+    offlineState.classList.remove("hidden");
+    emptyState.classList.add("hidden");
+    loading.classList.add("hidden");
+    pdfFrame.classList.add("hidden");
+    pdfFrame.removeAttribute("src");
+  }
+
+  netRetry.addEventListener("click", probeNett);
+  offlineRetry.addEventListener("click", probeNett);
 
   fetch("prosedyrer_rontgen.json")
     .then((res) => {
@@ -227,13 +293,22 @@
 
   function openProcedure(kat, p) {
     activeUrl = p.url;
+    activeValg = { kat: kat, p: p };
 
     viewerCategory.textContent = kat.navn;
     viewerProcedure.textContent = p.navn;
     openExternal.href = p.url;
     toolbar.classList.remove("hidden");
 
+    if (nettStatus === "frakoblet") {
+      visOffline(p);
+      render();
+      probeNett(); // dobbeltsjekk i tilfelle nettet nettopp kom tilbake
+      return;
+    }
+
     emptyState.classList.add("hidden");
+    offlineState.classList.add("hidden");
     loading.classList.remove("hidden");
     pdfFrame.classList.remove("hidden");
 
