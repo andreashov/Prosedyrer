@@ -10,41 +10,47 @@
 <body>
 
   <header class="topbar">
-    <div class="brand">
-      <div class="brand-icon">🩻</div>
-      <div class="brand-text">
-        <h1>Røntgenprosedyrer</h1>
-        <span>Dokumentene åpnes i eget vindu</span>
-      </div>
-    </div>
-
-    <div class="search-wrap">
-      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+    <span class="brand">Røntgenprosedyrer</span>
+    <button id="theme-toggle" class="theme-toggle" title="Bytt mellom lyst og mørkt tema" aria-label="Bytt tema">
+      <svg id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
       </svg>
-      <input id="search" type="search" placeholder="Søk etter prosedyre …" autocomplete="off">
-    </div>
-
-    <button id="theme-toggle" class="theme-toggle" title="Bytt mellom lyst og mørkt tema">
-      <span class="theme-icon">🌙</span>
+      <svg id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="hidden">
+        <circle cx="12" cy="12" r="4.4"></circle>
+        <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"></path>
+      </svg>
     </button>
   </header>
 
   <!-- Varsel når sykehusets dokumentserver ikke nås -->
   <div id="net-banner" class="net-banner hidden">
-    <span class="net-banner-icon">⚠️</span>
-    <span class="net-banner-text">
-      Ingen kontakt med sykehusets dokumentserver. Prosedyrene kan bare
-      åpnes fra sykehusets nettverk.
-    </span>
+    <span>⚠️&ensp;Ingen kontakt med sykehusets dokumentserver &ndash; prosedyrene kan bare åpnes fra sykehusets nettverk.</span>
     <button id="net-retry" class="net-retry">Prøv igjen</button>
   </div>
 
-  <main id="grid" class="grid" aria-label="Prosedyrer etter kroppsregion"></main>
+  <section class="hero">
+    <div id="spotlight" class="spotlight">
+      <div class="spotlight-field">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+        </svg>
+        <input id="search" type="text" placeholder="Søk i alle prosedyrer" autocomplete="off" spellcheck="false">
+        <kbd class="search-kbd">/</kbd>
+      </div>
+      <div id="spotlight-results" class="spotlight-results hidden" role="listbox"></div>
+    </div>
 
-  <div id="no-results" class="no-results hidden">
-    Ingen prosedyrer samsvarer med søket.
-  </div>
+    <div class="segmented" role="tablist" aria-label="Gruppe">
+      <div id="segment-glider" class="segment-glider"></div>
+      <button class="segment" data-gruppe="voksen" role="tab">Voksen</button>
+      <button class="segment" data-gruppe="barn" role="tab">Barn</button>
+      <button class="segment" data-gruppe="annet" role="tab">Annet</button>
+    </div>
+  </section>
+
+  <main id="board" class="board" aria-live="polite"></main>
+
+  <div id="backdrop" class="backdrop hidden"></div>
 
 </body>
 <script src="app.js"></script>

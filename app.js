@@ -1,52 +1,60 @@
 /* Røntgenprosedyrer – applikasjonslogikk.
-   Data leses fra prosedyrer_rontgen.json. Prosedyrene åpnes i ett felles
-   dokumentvindu i full skjermstørrelse, som gjenbrukes for hvert valg. */
+   Data leses fra prosedyrer_rontgen.json. Alt vises på én skjerm:
+   glidebryter for Voksen / Barn / Annet, og et Spotlight-søk som søker i
+   alle gruppene samtidig. Prosedyrene åpnes i ett felles dokumentvindu i
+   full skjermstørrelse som gjenbrukes for hvert valg. */
 (function () {
   "use strict";
 
-  const grid = document.getElementById("grid");
-  const noResults = document.getElementById("no-results");
+  const board = document.getElementById("board");
   const searchInput = document.getElementById("search");
+  const spotlight = document.getElementById("spotlight");
+  const resultsEl = document.getElementById("spotlight-results");
+  const backdrop = document.getElementById("backdrop");
+  const segments = Array.from(document.querySelectorAll(".segment"));
+  const glider = document.getElementById("segment-glider");
   const netBanner = document.getElementById("net-banner");
   const netRetry = document.getElementById("net-retry");
   const themeToggle = document.getElementById("theme-toggle");
-  const themeIcon = themeToggle.querySelector(".theme-icon");
+  const iconMoon = document.getElementById("icon-moon");
+  const iconSun = document.getElementById("icon-sun");
+
+  const GRUPPE_NAVN = { voksen: "Voksen", barn: "Barn", annet: "Annet" };
 
   // Tilstand
-  let searchTerm = "";
+  let gruppe = localStorage.getItem("gruppe") || "voksen";
+  if (!GRUPPE_NAVN[gruppe]) gruppe = "voksen";
   let activeUrl = null;
+  let valgtResultat = 0;
 
-  // Nettstatus mot sykehusets dokumentserver:
-  // "ukjent" | "tilkoblet" | "frakoblet"
+  // Nettstatus mot sykehusets dokumentserver
   let nettStatus = "ukjent";
   let probeUrl = null;
 
-  // Kategorier slått sammen på tvers av pasienttype:
-  // { navn, ikon, admin, voksen: [], barn: [] }
-  let KATEGORIER = [];
+  // Modell: kategorier per gruppe, og en flat liste for Spotlight-søket
+  const GRUPPER = { voksen: [], barn: [], annet: [] };
+  const ALLE = []; // { navn, url, kategori, gruppe }
 
   /* ---------- Tema ---------- */
 
   function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
-    themeIcon.textContent = theme === "dark" ? "☀️" : "🌙";
+    iconMoon.classList.toggle("hidden", theme === "dark");
+    iconSun.classList.toggle("hidden", theme !== "dark");
   }
 
-  const savedTheme =
+  applyTheme(
     localStorage.getItem("theme") ||
-    (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  applyTheme(savedTheme);
+      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+  );
 
   themeToggle.addEventListener("click", () => {
-    const current = document.documentElement.getAttribute("data-theme");
-    applyTheme(current === "dark" ? "light" : "dark");
+    applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
   });
 
-  /* ---------- Ikoner og bilder per kategori ---------- */
+  /* ---------- Bilder og ikoner per kategori ---------- */
 
-  // Nedskalerte utgaver av bildene i kategorier/ (lages av IT/vedlikeholder;
-  // se README). Kategorier uten bilde faller tilbake til emoji-ikonet.
   const BILDER = {
     "Caput": "kategorier/thumbs/Caput.png",
     "Thorax / Abdomen": "kategorier/thumbs/Thorax Abdomen.png",
@@ -59,12 +67,6 @@
   function iconFor(navn, admin) {
     if (admin) return "📋";
     const n = navn.toLowerCase();
-    if (n.includes("caput") || n.includes("hode")) return "🧠";
-    if (n.includes("thorax") || n.includes("abdomen")) return "🫁";
-    if (n.includes("columna")) return "🦴";
-    if (n.includes("bekken") || n.includes("hofte")) return "🩻";
-    if (n.includes("overekstremitet")) return "💪";
-    if (n.includes("underekstremitet")) return "🦵";
     if (n.includes("spesial")) return "🔬";
     return "🩻";
   }
@@ -72,30 +74,22 @@
   /* ---------- Datainnlasting ---------- */
 
   function buildModel(data) {
-    const perNavn = new Map();
+    const perGruppe = { voksen: new Map(), barn: new Map(), annet: new Map() };
     for (const entry of data.rontgen || []) {
       const admin = entry.type === "administrativ";
-      let kat = perNavn.get(entry.kategori);
+      const g = admin ? "annet" : entry.pasienttype === "barn" ? "barn" : "voksen";
+      let kat = perGruppe[g].get(entry.kategori);
       if (!kat) {
-        kat = {
-          navn: entry.kategori,
-          ikon: iconFor(entry.kategori, admin),
-          admin: admin,
-          voksen: [],
-          barn: []
-        };
-        perNavn.set(entry.kategori, kat);
-        KATEGORIER.push(kat);
+        kat = { navn: entry.kategori, admin: admin, prosedyrer: [] };
+        perGruppe[g].set(entry.kategori, kat);
+        GRUPPER[g].push(kat);
       }
-      const liste = entry.pasienttype === "barn" ? kat.barn : kat.voksen;
-      liste.push.apply(liste, entry.prosedyrer || []);
-
       for (const p of entry.prosedyrer || []) {
+        kat.prosedyrer.push(p);
+        ALLE.push({ navn: p.navn, url: p.url, kategori: entry.kategori, gruppe: g });
         if (!probeUrl && p.url.includes("sykehuspartner.no")) probeUrl = p.url;
       }
     }
-    // Administrative kategorier legges sist
-    KATEGORIER.sort((a, b) => Number(a.admin) - Number(b.admin));
   }
 
   fetch("prosedyrer_rontgen.json")
@@ -105,15 +99,15 @@
     })
     .then((data) => {
       buildModel(data);
-      render();
+      setGruppe(gruppe, true);
       probeNett();
-      setInterval(probeNett, 45000); // sjekk jevnlig, f.eks. ved bytte til VPN
+      setInterval(probeNett, 45000);
     })
     .catch((err) => {
-      noResults.textContent =
-        "Kunne ikke laste prosedyrelisten (" + String(err.message || err) + "). " +
-        "Hvis du åpnet siden direkte fra en fil, må den i stedet åpnes via en webserver.";
-      noResults.classList.remove("hidden");
+      board.innerHTML =
+        '<div class="feilmelding">Kunne ikke laste prosedyrelisten (' +
+        escapeHtml(String(err.message || err)) +
+        "). Hvis du åpnet siden direkte fra en fil, må den åpnes via en webserver.</div>";
     });
 
   /* ---------- Nettsjekk mot dokumentserveren ---------- */
@@ -135,9 +129,8 @@
 
   /* ---------- Dokumentvindu ---------- */
 
-  /* Åpner (eller gjenbruker) dokumentvinduet i full skjermstørrelse.
-     Samme navngitte vindu navigeres på nytt for hver prosedyre, så det blir
-     aldri mer enn ett. Ekte fullskjerm (F11) kan ikke startes utenfra av
+  /* Ett navngitt vindu i full skjermstørrelse som gjenbrukes for hver
+     prosedyre. Ekte fullskjerm (F11) kan ikke startes utenfra av
      sikkerhetsgrunner, men vinduet fyller hele den tilgjengelige skjermen. */
   function apneDokumentvindu(url) {
     const vindu = window.open(
@@ -151,35 +144,47 @@
 
   function velgProsedyre(p) {
     if (nettStatus === "frakoblet") {
-      // Ingen kontakt med serveren – pek på varselet i stedet for å åpne
       netBanner.classList.remove("hidden", "pulse");
-      void netBanner.offsetWidth; // restart animasjonen
+      void netBanner.offsetWidth;
       netBanner.classList.add("pulse");
-      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     activeUrl = p.url;
     apneDokumentvindu(p.url);
-    render(); // oppdater aktiv markering
+    renderBoard();
   }
 
-  /* ---------- Søk ---------- */
+  /* ---------- Glidebryteren ---------- */
 
-  searchInput.addEventListener("input", () => {
-    searchTerm = searchInput.value.trim().toLowerCase();
-    render();
-  });
-
-  function highlight(text) {
-    if (!searchTerm) return escapeHtml(text);
-    const idx = text.toLowerCase().indexOf(searchTerm);
-    if (idx === -1) return escapeHtml(text);
-    return (
-      escapeHtml(text.slice(0, idx)) +
-      "<mark>" + escapeHtml(text.slice(idx, idx + searchTerm.length)) + "</mark>" +
-      escapeHtml(text.slice(idx + searchTerm.length))
-    );
+  function setGruppe(g, hopp) {
+    gruppe = g;
+    localStorage.setItem("gruppe", g);
+    const idx = ["voksen", "barn", "annet"].indexOf(g);
+    glider.style.transform = "translateX(" + idx * 100 + "%)";
+    for (const s of segments) {
+      const aktiv = s.dataset.gruppe === g;
+      s.classList.toggle("active", aktiv);
+      s.setAttribute("aria-selected", String(aktiv));
+    }
+    if (hopp) {
+      renderBoard();
+      return;
+    }
+    // Myk krysstoning ved bytte
+    board.classList.add("skifter");
+    setTimeout(() => {
+      renderBoard();
+      board.classList.remove("skifter");
+    }, 160);
   }
+
+  for (const s of segments) {
+    s.addEventListener("click", () => {
+      if (s.dataset.gruppe !== gruppe) setGruppe(s.dataset.gruppe);
+    });
+  }
+
+  /* ---------- Tavlen ---------- */
 
   function escapeHtml(s) {
     return s.replace(/[&<>"']/g, (c) => ({
@@ -187,88 +192,159 @@
     })[c]);
   }
 
-  /* ---------- Rendering ---------- */
+  function renderBoard() {
+    board.innerHTML = "";
+    const kategorier = GRUPPER[gruppe];
+    board.classList.toggle("enkel", kategorier.length === 1);
 
-  function lagKolonne(type, label, prosedyrer) {
-    const col = document.createElement("div");
-    col.className = "col";
+    for (const kat of kategorier) {
+      const kol = document.createElement("section");
+      kol.className = "kolonne";
 
-    const head = document.createElement("div");
-    head.className = "col-label " + type;
-    head.innerHTML = '<span class="dot"></span>' + label;
-    col.appendChild(head);
-
-    if (prosedyrer.length === 0) {
-      const tom = document.createElement("div");
-      tom.className = "col-tom";
-      tom.textContent = "Ingen treff";
-      col.appendChild(tom);
-      return col;
-    }
-
-    for (const p of prosedyrer) {
-      const btn = document.createElement("button");
-      btn.className = "procedure-btn" + (p.url === activeUrl ? " active" : "");
-      btn.innerHTML = highlight(p.navn);
-      btn.title = "Åpne i dokumentvinduet";
-      btn.addEventListener("click", () => velgProsedyre(p));
-      col.appendChild(btn);
-    }
-    return col;
-  }
-
-  function render() {
-    grid.innerHTML = "";
-    let antallTreff = 0;
-
-    for (const kat of KATEGORIER) {
-      const voksen = searchTerm
-        ? kat.voksen.filter((p) => p.navn.toLowerCase().includes(searchTerm))
-        : kat.voksen;
-      const barn = searchTerm
-        ? kat.barn.filter((p) => p.navn.toLowerCase().includes(searchTerm))
-        : kat.barn;
-
-      const antall = voksen.length + barn.length;
-      if (antall === 0) continue; // skjul kort uten treff
-      antallTreff += antall;
-
-      const card = document.createElement("section");
-      card.className = "card";
-
-      const head = document.createElement("header");
-      head.className = "card-head";
+      const head = document.createElement("div");
+      head.className = "kol-head";
       const bilde = BILDER[kat.navn];
       head.innerHTML =
+        '<div class="kol-bilde">' +
         (bilde
-          ? '<span class="card-img-wrap"><img class="card-img" src="' +
-            encodeURI(bilde) + '" alt="" loading="lazy"></span>'
-          : '<span class="card-icon">' + kat.ikon + "</span>") +
-        '<span class="card-name">' + escapeHtml(kat.navn) + "</span>" +
-        '<span class="card-count">' + antall + "</span>";
-      card.appendChild(head);
+          ? '<img src="' + encodeURI(bilde) + '" alt="" loading="lazy">'
+          : '<span class="kol-emoji">' + iconFor(kat.navn, kat.admin) + "</span>") +
+        "</div>" +
+        '<div class="kol-navn">' + escapeHtml(kat.navn) + "</div>" +
+        '<div class="kol-antall">' + kat.prosedyrer.length +
+        (kat.prosedyrer.length === 1 ? " prosedyre" : " prosedyrer") + "</div>";
+      kol.appendChild(head);
 
-      const cols = document.createElement("div");
-      const harVoksen = kat.voksen.length > 0;
-      const harBarn = kat.barn.length > 0;
+      const strek = document.createElement("div");
+      strek.className = "kol-strek";
+      kol.appendChild(strek);
 
-      if (kat.admin) {
-        cols.className = "card-cols single";
-        cols.appendChild(lagKolonne("felles", "Felles", voksen.concat(barn)));
-      } else if (harVoksen && harBarn) {
-        cols.className = "card-cols";
-        cols.appendChild(lagKolonne("voksen", "Voksen", voksen));
-        cols.appendChild(lagKolonne("barn", "Barn", barn));
-      } else {
-        cols.className = "card-cols single";
-        if (harVoksen) cols.appendChild(lagKolonne("voksen", "Voksen", voksen));
-        else cols.appendChild(lagKolonne("barn", "Barn", barn));
+      const liste = document.createElement("div");
+      liste.className = "kol-liste";
+      for (const p of kat.prosedyrer) {
+        const btn = document.createElement("button");
+        btn.className = "prosedyre" + (p.url === activeUrl ? " active" : "");
+        btn.textContent = p.navn;
+        btn.title = "Åpne i dokumentvinduet";
+        btn.addEventListener("click", () => velgProsedyre(p));
+        liste.appendChild(btn);
       }
+      kol.appendChild(liste);
+      board.appendChild(kol);
+    }
+  }
 
-      card.appendChild(cols);
-      grid.appendChild(card);
+  /* ---------- Spotlight-søk ---------- */
+
+  function sokeTreff(term) {
+    const t = term.toLowerCase();
+    const starter = [];
+    const inneholder = [];
+    for (const p of ALLE) {
+      const i = p.navn.toLowerCase().indexOf(t);
+      if (i === 0) starter.push(p);
+      else if (i > 0) inneholder.push(p);
+    }
+    return starter.concat(inneholder);
+  }
+
+  function highlight(navn, term) {
+    const i = navn.toLowerCase().indexOf(term.toLowerCase());
+    if (i === -1) return escapeHtml(navn);
+    return (
+      escapeHtml(navn.slice(0, i)) +
+      "<mark>" + escapeHtml(navn.slice(i, i + term.length)) + "</mark>" +
+      escapeHtml(navn.slice(i + term.length))
+    );
+  }
+
+  let gjeldendeTreff = [];
+
+  function oppdaterSpotlight() {
+    const term = searchInput.value.trim();
+    if (!term) {
+      lukkSpotlight();
+      return;
     }
 
-    noResults.classList.toggle("hidden", antallTreff > 0);
+    gjeldendeTreff = sokeTreff(term);
+    valgtResultat = 0;
+    resultsEl.innerHTML = "";
+
+    if (gjeldendeTreff.length === 0) {
+      const tom = document.createElement("div");
+      tom.className = "result-tom";
+      tom.textContent = "Ingen prosedyrer samsvarer med «" + term + "»";
+      resultsEl.appendChild(tom);
+    } else {
+      gjeldendeTreff.forEach((p, i) => {
+        const row = document.createElement("button");
+        row.className = "result-row" + (i === valgtResultat ? " selected" : "");
+        row.setAttribute("role", "option");
+        row.innerHTML =
+          '<span class="result-navn">' + highlight(p.navn, term) + "</span>" +
+          '<span class="result-meta">' +
+          '<span class="result-kategori">' + escapeHtml(p.kategori) + "</span>" +
+          '<span class="gruppe-badge ' + p.gruppe + '">' + GRUPPE_NAVN[p.gruppe] + "</span>" +
+          "</span>";
+        row.addEventListener("click", () => {
+          velgProsedyre(p);
+          lukkSpotlight();
+        });
+        resultsEl.appendChild(row);
+      });
+    }
+
+    spotlight.classList.add("open");
+    resultsEl.classList.remove("hidden");
+    backdrop.classList.remove("hidden");
   }
+
+  function lukkSpotlight() {
+    spotlight.classList.remove("open");
+    resultsEl.classList.add("hidden");
+    backdrop.classList.add("hidden");
+    gjeldendeTreff = [];
+  }
+
+  function flyttValg(retning) {
+    if (gjeldendeTreff.length === 0) return;
+    valgtResultat = (valgtResultat + retning + gjeldendeTreff.length) % gjeldendeTreff.length;
+    const rader = resultsEl.querySelectorAll(".result-row");
+    rader.forEach((r, i) => r.classList.toggle("selected", i === valgtResultat));
+    rader[valgtResultat].scrollIntoView({ block: "nearest" });
+  }
+
+  searchInput.addEventListener("input", oppdaterSpotlight);
+
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); flyttValg(1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); flyttValg(-1); }
+    else if (e.key === "Enter") {
+      if (gjeldendeTreff.length > 0) {
+        velgProsedyre(gjeldendeTreff[valgtResultat]);
+        lukkSpotlight();
+      }
+    } else if (e.key === "Escape") {
+      searchInput.value = "";
+      lukkSpotlight();
+      searchInput.blur();
+    }
+  });
+
+  backdrop.addEventListener("click", () => {
+    searchInput.value = "";
+    lukkSpotlight();
+  });
+
+  // Begynn å skrive hvor som helst – søkefeltet fanger det, som Spotlight
+  document.addEventListener("keydown", (e) => {
+    if (e.target === searchInput) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const skrivbart = e.key.length === 1 && e.key !== " ";
+    if (skrivbart || e.key === "/") {
+      if (e.key === "/") e.preventDefault();
+      searchInput.focus();
+    }
+  });
 })();
