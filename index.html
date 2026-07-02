@@ -98,19 +98,19 @@
           </div>
         </div>
 
-        <!-- Dokumentet krever innlogging (SSO nekter iframe-visning) -->
-        <div id="auth-state" class="empty-state hidden">
-          <div class="empty-icon">🔐</div>
-          <h2>Dokumentet krever innlogging</h2>
+        <!-- Dokumentet vises i eget vindu (innlogging hindrer panelvisning) -->
+        <div id="vindu-state" class="empty-state hidden">
+          <div class="empty-icon">🪟</div>
+          <h2>Dokumentet vises i eget vindu</h2>
           <p>
-            <strong id="auth-procedure"></strong> sendes via sykehusets
-            innloggingstjeneste, som ikke kan vises inne i panelet.
-            Åpne dokumentet i ny fane og logg inn ved behov &ndash; etterpå kan du
-            prøve panelet igjen.
+            <strong id="vindu-procedure"></strong><span id="vindu-detalj"></span><br>
+            Sykehusets innlogging hindrer at dokumenter vises direkte på siden.
+            Dokumentvinduet legger seg ved siden av og gjenbrukes for hver
+            prosedyre du velger.
           </p>
           <div class="offline-actions">
-            <a id="auth-external" href="#" target="_blank" rel="noopener" class="btn-accent">Åpne i ny fane</a>
-            <button id="auth-retry" class="btn-ghost">Prøv igjen i panelet</button>
+            <button id="vindu-open" class="btn-accent">Åpne dokumentet</button>
+            <button id="vindu-retry" class="btn-ghost">Prøv panelvisning igjen</button>
           </div>
         </div>
 

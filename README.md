@@ -37,11 +37,17 @@ pushes til `main`. Ingen byggeverktøy kreves – siden er ren HTML/CSS/JS.
 
 ## Viktig om PDF-visning i siden
 
-PDF-ene vises i en innebygd ramme (`iframe`). Dette fungerer så lenge
-dokumentserveren **tillater innbygging** (dvs. ikke sender
-`X-Frame-Options: DENY/SAMEORIGIN` eller en blokkerende
-`Content-Security-Policy: frame-ancestors`). Hvis et dokument ikke vises,
-bruk knappen **«Ny fane»** øverst til høyre for å åpne det i en egen fane.
+PDF-ene forsøkes først vist i en innebygd ramme i høyre panel. Sykehusets
+dokumentserver sender imidlertid forespørsler videre til innloggingstjenesten
+(SSO), og nettleseren nekter å dele innloggingen med rammer som er innebygd i
+sider fra andre domener (SameSite-regelen). Siden oppdager dette selv og
+bytter da til et **dokumentvindu**: ett eget vindu som legger seg på høyre
+halvdel av skjermen og gjenbrukes for hver prosedyre som velges. Valget
+huskes; knappen «Prøv panelvisning igjen» nullstiller det.
+
+Skal panelvisning fungere fullt ut, må siden hostes på sykehusets eget nett
+(samme «site» som dokumentserveren, f.eks. en intern webserver hos
+Sykehuspartner). Siden er fire statiske filer og kan flyttes dit uendret.
 
 ## Funksjoner
 

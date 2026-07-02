@@ -28,10 +28,11 @@
   const offlineProcedure = document.getElementById("offline-procedure");
   const offlineRetry = document.getElementById("offline-retry");
   const offlineExternal = document.getElementById("offline-external");
-  const authState = document.getElementById("auth-state");
-  const authProcedure = document.getElementById("auth-procedure");
-  const authRetry = document.getElementById("auth-retry");
-  const authExternal = document.getElementById("auth-external");
+  const vinduState = document.getElementById("vindu-state");
+  const vinduProcedure = document.getElementById("vindu-procedure");
+  const vinduDetalj = document.getElementById("vindu-detalj");
+  const vinduOpen = document.getElementById("vindu-open");
+  const vinduRetry = document.getElementById("vindu-retry");
 
   // Tilstand
   let gruppe = localStorage.getItem("gruppe") || "voksen"; // "voksen" | "barn"
@@ -44,6 +45,15 @@
   // "ukjent" | "tilkoblet" | "frakoblet"
   let nettStatus = "ukjent";
   let probeUrl = null;
+
+  // Husker at panelvisning er blokkert av innloggingen, slik at dokumenter
+  // åpnes rett i dokumentvinduet ved neste klikk.
+  let panelBlokkert = localStorage.getItem("panelBlokkert") === "1";
+
+  function settPanelBlokkert(v) {
+    panelBlokkert = v;
+    localStorage.setItem("panelBlokkert", v ? "1" : "0");
+  }
 
   // Modell bygget fra JSON: { voksen: [kategori…], barn: [kategori…] }
   // Hver kategori: { id, navn, ikon, admin, prosedyrer }
@@ -144,16 +154,34 @@
     offlineExternal.href = p.url;
     offlineState.classList.remove("hidden");
     emptyState.classList.add("hidden");
-    authState.classList.add("hidden");
+    vinduState.classList.add("hidden");
     loading.classList.add("hidden");
     pdfFrame.classList.add("hidden");
     pdfFrame.removeAttribute("src");
   }
 
-  function visAuth(p) {
-    authProcedure.textContent = p.navn;
-    authExternal.href = p.url;
-    authState.classList.remove("hidden");
+  /* Åpner (eller gjenbruker) dokumentvinduet: ett navngitt vindu som legger
+     seg på høyre halvdel av skjermen. Samme vindu navigeres på nytt for hver
+     prosedyre, så det blir aldri mer enn ett. */
+  function apneDokumentvindu(url) {
+    const bredde = Math.max(600, Math.floor(screen.availWidth / 2));
+    const venstre = screen.availWidth - bredde;
+    const vindu = window.open(
+      url,
+      "prosedyreVindu",
+      "popup=yes,width=" + bredde + ",height=" + screen.availHeight +
+        ",left=" + venstre + ",top=0"
+    );
+    if (vindu) vindu.focus();
+    return !!vindu;
+  }
+
+  function visVindu(p, apnet) {
+    vinduProcedure.textContent = p.navn;
+    vinduDetalj.textContent = apnet
+      ? " er åpnet i dokumentvinduet."
+      : " åpnes i et eget vindu ved siden av.";
+    vinduState.classList.remove("hidden");
     emptyState.classList.add("hidden");
     offlineState.classList.add("hidden");
     loading.classList.add("hidden");
@@ -163,7 +191,13 @@
 
   netRetry.addEventListener("click", probeNett);
   offlineRetry.addEventListener("click", probeNett);
-  authRetry.addEventListener("click", () => {
+  vinduOpen.addEventListener("click", () => {
+    if (!activeValg) return;
+    const apnet = apneDokumentvindu(activeValg.p.url);
+    visVindu(activeValg.p, apnet);
+  });
+  vinduRetry.addEventListener("click", () => {
+    settPanelBlokkert(false);
     if (activeValg) openProcedure(activeValg.kat, activeValg.p);
   });
 
@@ -187,7 +221,10 @@
       setTimeout(() => sjekkBlokkert(p, forsok + 1), 700);
       return;
     }
-    visAuth(p);
+    // Innloggingen blokkerer panelet – bytt til dokumentvindu-modus.
+    // (Vinduet kan ikke åpnes automatisk her, siden det krever et klikk.)
+    settPanelBlokkert(true);
+    visVindu(p, false);
   }
 
   fetch("prosedyrer_rontgen.json")
@@ -349,18 +386,20 @@
       return;
     }
 
-    emptyState.classList.add("hidden");
-    offlineState.classList.add("hidden");
-    authState.classList.add("hidden");
-    loading.classList.remove("hidden");
-
-    // Filer som ikke er PDF (f.eks. SharePoint-dokumenter) kan aldri vises
-    // i panelet – de krever innlogging og egen fane.
-    if (!/\.pdf(\?|#|$)/i.test(p.url)) {
-      visAuth(p);
+    // Er panelet allerede kjent blokkert, eller kan filen aldri vises der
+    // (f.eks. SharePoint-dokumenter)? Da rett i dokumentvinduet – klikket på
+    // prosedyren teller som brukerhandling, så vinduet kan åpnes direkte.
+    if (panelBlokkert || !/\.pdf(\?|#|$)/i.test(p.url)) {
+      const apnet = apneDokumentvindu(p.url);
+      visVindu(p, apnet);
       render();
       return;
     }
+
+    emptyState.classList.add("hidden");
+    offlineState.classList.add("hidden");
+    vinduState.classList.add("hidden");
+    loading.classList.remove("hidden");
 
     pdfFrame.classList.remove("hidden");
     pdfFrame.onload = () => {
