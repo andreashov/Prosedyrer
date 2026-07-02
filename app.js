@@ -133,28 +133,32 @@
 
   /* ---------- Dokumentvindu ---------- */
 
-  /* Tre måter å åpne dokumentene på:
-     - "nytt":  et vanlig nytt nettleservindu, akkurat som høyreklikk →
-                «Åpne kobling i nytt vindu». Arver maksimert/fullskjerm-
-                tilstand fra nettleseren. (noopener i features gjør at
-                Chromium/Edge åpner et ekte vindu, ikke en fane.)
-     - "full":  ett gjenbrukt popup-vindu i hele den tilgjengelige skjermen.
-     - "hoyre": ett gjenbrukt popup-vindu i høyre halvdel, full høyde. */
-  const VINDU_MODI = ["nytt", "full", "hoyre"];
-  let vinduModus = localStorage.getItem("vinduModus2") || "nytt";
-  if (VINDU_MODI.indexOf(vinduModus) === -1) vinduModus = "nytt";
+  /* Tre måter å åpne dokumentene på ved vanlig klikk:
+     - "full":  ett gjenbrukt popup-vindu i hele den tilgjengelige skjermen
+                (nærmest fullskjerm et skript har lov til å komme).
+     - "hoyre": ett gjenbrukt popup-vindu i høyre halvdel, full høyde.
+     - "fane":  vanlig ny fane, styrt av nettleseren.
+     Merk: nettlesere tillater ikke at skript åpner et vanlig nytt
+     nettleservindu med faner – det valget er forbeholdt brukeren selv.
+     Shift+klikk og høyreklikk → «Åpne kobling i nytt vindu» gjør det,
+     og fungerer på alle prosedyrene siden de er ekte lenker. */
+  const VINDU_MODI = ["full", "hoyre", "fane"];
+  let vinduModus = localStorage.getItem("vinduModus3") || "full";
+  if (VINDU_MODI.indexOf(vinduModus) === -1) vinduModus = "full";
   let dokVindu = null;
 
   function vinduGeometri() {
+    const x0 = screen.availLeft || 0;
+    const y0 = screen.availTop || 0;
     if (vinduModus === "hoyre") {
       const w = Math.max(620, Math.round(screen.availWidth / 2));
-      return { w: w, h: screen.availHeight, x: screen.availWidth - w, y: 0 };
+      return { w: w, h: screen.availHeight, x: x0 + screen.availWidth - w, y: y0 };
     }
-    return { w: screen.availWidth, h: screen.availHeight, x: 0, y: 0 };
+    return { w: screen.availWidth, h: screen.availHeight, x: x0, y: y0 };
   }
 
   function apneDokumentvindu(url) {
-    if (vinduModus === "nytt") {
+    if (vinduModus === "fane") {
       window.open(url, "_blank", "noopener");
       return;
     }
@@ -173,24 +177,27 @@
   }
 
   const VINDU_TITLER = {
-    nytt: "Dokumenter åpnes i nytt nettleservindu (som «Åpne i nytt vindu») – klikk for popup i hele skjermen",
-    full: "Dokumenter åpnes i ett gjenbrukt vindu i hele skjermen – klikk for høyre halvdel",
-    hoyre: "Dokumenter åpnes i ett gjenbrukt vindu i høyre halvdel – klikk for nytt nettleservindu"
+    full: "Dokumenter åpnes i ett gjenbrukt vindu i hele skjermen – klikk for høyre halvdel. " +
+      "Tips: Shift+klikk på en prosedyre gir ekte nytt nettleservindu.",
+    hoyre: "Dokumenter åpnes i ett gjenbrukt vindu i høyre halvdel – klikk for ny fane. " +
+      "Tips: Shift+klikk på en prosedyre gir ekte nytt nettleservindu.",
+    fane: "Dokumenter åpnes i ny fane – klikk for gjenbrukt vindu i hele skjermen. " +
+      "Tips: Shift+klikk på en prosedyre gir ekte nytt nettleservindu."
   };
 
   function oppdaterVinduToggle() {
-    iconNytt.classList.toggle("hidden", vinduModus !== "nytt");
     iconFull.classList.toggle("hidden", vinduModus !== "full");
     iconHalv.classList.toggle("hidden", vinduModus !== "hoyre");
+    iconNytt.classList.toggle("hidden", vinduModus !== "fane");
     vinduToggle.title = VINDU_TITLER[vinduModus];
   }
 
   vinduToggle.addEventListener("click", () => {
     vinduModus = VINDU_MODI[(VINDU_MODI.indexOf(vinduModus) + 1) % VINDU_MODI.length];
-    localStorage.setItem("vinduModus2", vinduModus);
+    localStorage.setItem("vinduModus3", vinduModus);
     oppdaterVinduToggle();
     // Er popup-vinduet åpent, endres størrelsen med en gang
-    if (vinduModus !== "nytt" && dokVindu && !dokVindu.closed) {
+    if (vinduModus !== "fane" && dokVindu && !dokVindu.closed) {
       const g = vinduGeometri();
       try {
         dokVindu.resizeTo(g.w, g.h);
