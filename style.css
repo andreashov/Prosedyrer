@@ -96,6 +96,12 @@ body {
   letter-spacing: -0.01em;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .theme-toggle {
   width: 34px;
   height: 34px;

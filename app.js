@@ -18,6 +18,9 @@
   const themeToggle = document.getElementById("theme-toggle");
   const iconMoon = document.getElementById("icon-moon");
   const iconSun = document.getElementById("icon-sun");
+  const vinduToggle = document.getElementById("vindu-toggle");
+  const iconFull = document.getElementById("icon-full");
+  const iconHalv = document.getElementById("icon-halv");
 
   const GRUPPE_NAVN = { voksen: "Voksen", barn: "Barn", annet: "Annet" };
 
@@ -129,18 +132,61 @@
 
   /* ---------- Dokumentvindu ---------- */
 
-  /* Ett navngitt vindu i full skjermstørrelse som gjenbrukes for hver
-     prosedyre. Ekte fullskjerm (F11) kan ikke startes utenfra av
-     sikkerhetsgrunner, men vinduet fyller hele den tilgjengelige skjermen. */
+  /* Ett navngitt vindu som gjenbrukes for hver prosedyre. To størrelser:
+     "full" (hele den tilgjengelige skjermen) eller "hoyre" (høyre halvdel i
+     full høyde, side om side med denne siden). Ekte fullskjerm (F11) kan
+     ikke startes utenfra av sikkerhetsgrunner – men trykkes F11 én gang i
+     dokumentvinduet, forblir det i fullskjerm siden vinduet gjenbrukes. */
+  let vinduModus = localStorage.getItem("vinduModus") || "full"; // "full" | "hoyre"
+  let dokVindu = null;
+
+  function vinduGeometri() {
+    if (vinduModus === "hoyre") {
+      const w = Math.max(620, Math.round(screen.availWidth / 2));
+      return { w: w, h: screen.availHeight, x: screen.availWidth - w, y: 0 };
+    }
+    return { w: screen.availWidth, h: screen.availHeight, x: 0, y: 0 };
+  }
+
   function apneDokumentvindu(url) {
+    const g = vinduGeometri();
     const vindu = window.open(
       url,
       "prosedyreVindu",
-      "popup=yes,width=" + screen.availWidth + ",height=" + screen.availHeight + ",left=0,top=0"
+      "popup=yes,width=" + g.w + ",height=" + g.h + ",left=" + g.x + ",top=" + g.y
     );
-    if (vindu) vindu.focus();
-    else window.open(url, "_blank"); // popup blokkert – fall tilbake til fane
+    if (!vindu) {
+      window.open(url, "_blank"); // popup blokkert – fall tilbake til fane
+      return;
+    }
+    dokVindu = vindu;
+    vindu.focus();
   }
+
+  function oppdaterVinduToggle() {
+    const full = vinduModus === "full";
+    iconFull.classList.toggle("hidden", !full);
+    iconHalv.classList.toggle("hidden", full);
+    vinduToggle.title = full
+      ? "Dokumentvinduet fyller hele skjermen – klikk for høyre halvdel"
+      : "Dokumentvinduet fyller høyre halvdel – klikk for hele skjermen";
+  }
+
+  vinduToggle.addEventListener("click", () => {
+    vinduModus = vinduModus === "full" ? "hoyre" : "full";
+    localStorage.setItem("vinduModus", vinduModus);
+    oppdaterVinduToggle();
+    // Er dokumentvinduet åpent, endres størrelsen med en gang
+    if (dokVindu && !dokVindu.closed) {
+      const g = vinduGeometri();
+      try {
+        dokVindu.resizeTo(g.w, g.h);
+        dokVindu.moveTo(g.x, g.y);
+      } catch (e) { /* nekter nettleseren, gjelder ny størrelse fra neste åpning */ }
+    }
+  });
+
+  oppdaterVinduToggle();
 
   function velgProsedyre(p) {
     if (nettStatus === "frakoblet") {

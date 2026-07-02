@@ -11,6 +11,16 @@
 
   <header class="topbar">
     <span class="brand">Røntgenprosedyrer</span>
+    <div class="topbar-actions">
+    <button id="vindu-toggle" class="theme-toggle" aria-label="Størrelse på dokumentvinduet">
+      <svg id="icon-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"></path>
+      </svg>
+      <svg id="icon-halv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" class="hidden">
+        <rect x="3" y="4" width="18" height="16" rx="2.5"></rect>
+        <path d="M13 4h6a2.5 2.5 0 0 1 2 2.5v11a2.5 2.5 0 0 1-2 2.5h-6z" fill="currentColor" stroke="none"></path>
+      </svg>
+    </button>
     <button id="theme-toggle" class="theme-toggle" title="Bytt mellom lyst og mørkt tema" aria-label="Bytt tema">
       <svg id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>
@@ -20,6 +30,7 @@
         <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"></path>
       </svg>
     </button>
+    </div>
   </header>
 
   <!-- Varsel når sykehusets dokumentserver ikke nås -->
