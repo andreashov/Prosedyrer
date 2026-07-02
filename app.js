@@ -337,28 +337,122 @@
     }
   }
 
-  /* ---------- Spotlight-søk ---------- */
+  /* ---------- Spotlight-søk ----------
+     Flerord: alle ordene i søket må treffe (navn eller kategori).
+     Synonymer: dagligtale oversettes til fagtermene i listen.
+     Skrivefeil: ett avvik tolereres i ord på 5+ tegn (redigeringsavstand
+     mot ordstarter i navnet, så «scapoid» treffer «scaphoideum»). */
+
+  const SYNONYMER = {
+    "hode": "caput", "hodet": "caput", "skalle": "caput",
+    "lunge": "thorax", "lunger": "thorax", "bryst": "thorax", "hjerte": "cor",
+    "mage": "abdomen", "magen": "abdomen", "buk": "abdomen",
+    "rygg": "columna", "ryggen": "columna", "ryggsoyle": "columna", "ryggsøyle": "columna",
+    "nakke": "cervicalcolumna", "nakken": "cervicalcolumna",
+    "korsrygg": "lumbosacralcolumna",
+    "hofta": "hofte", "hoften": "hofte",
+    "skulderblad": "scapula",
+    "krageben": "clavicula", "kragebein": "clavicula",
+    "batben": "scaphoideum", "båtben": "scaphoideum", "båtbein": "scaphoideum",
+    "hael": "calcaneus", "hæl": "calcaneus", "hælben": "calcaneus",
+    "kjeve": "ansikt",
+    "ribben": "costa", "ribbein": "costa",
+    "brystben": "sternum", "brystbein": "sternum",
+    "laar": "femur", "lår": "femur", "lårben": "femur",
+    "tommel": "fingre", "finger": "fingre",
+    "taa": "tær", "tå": "tær"
+  };
+
+  function editAvstand(a, b, maks) {
+    if (Math.abs(a.length - b.length) > maks) return maks + 1;
+    let forrige = [];
+    for (let j = 0; j <= b.length; j++) forrige[j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      const rad = [i];
+      for (let j = 1; j <= b.length; j++) {
+        rad[j] = Math.min(
+          forrige[j] + 1,
+          rad[j - 1] + 1,
+          forrige[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+        );
+      }
+      forrige = rad;
+    }
+    return forrige[b.length];
+  }
+
+  // Treffer ordet i søket noe ord i teksten? Returnerer poeng, 0 = ikke treff.
+  function ordTreff(token, tekst, ord) {
+    const i = tekst.indexOf(token);
+    if (i === 0 || (i > 0 && tekst[i - 1] === " ")) return 3; // ordstart
+    if (i > 0) return 2; // inne i et ord
+    if (token.length >= 5) {
+      // tåler én skrivefeil mot starten av hvert ord i teksten
+      for (const o of ord) {
+        for (const len of [token.length - 1, token.length, token.length + 1]) {
+          if (len < 3 || len > o.length) continue;
+          if (editAvstand(token, o.slice(0, len), 1) <= 1) return 1;
+        }
+      }
+    }
+    return 0;
+  }
 
   function sokeTreff(term) {
-    const t = term.toLowerCase();
-    const starter = [];
-    const inneholder = [];
+    const tokens = term.toLowerCase().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return [];
+    const resultat = [];
+
     for (const p of ALLE) {
-      const i = p.navn.toLowerCase().indexOf(t);
-      if (i === 0) starter.push(p);
-      else if (i > 0) inneholder.push(p);
+      const navnTekst = p.navn.toLowerCase();
+      const navnOrd = navnTekst.split(/[^a-zæøå0-9]+/).filter(Boolean);
+      const tekst = (p.navn + " " + p.kategori + " " + GRUPPE_NAVN[p.gruppe]).toLowerCase();
+      const ord = tekst.split(/[^a-zæøå0-9]+/).filter(Boolean);
+      let sum = 0;
+      let alle = true;
+      for (const token of tokens) {
+        const kandidater = [token];
+        if (SYNONYMER[token]) kandidater.push(SYNONYMER[token]);
+        let poeng = 0;
+        for (const k of kandidater) {
+          // treff i selve navnet teller dobbelt
+          poeng = Math.max(poeng, ordTreff(k, navnTekst, navnOrd) * 2, ordTreff(k, tekst, ord));
+        }
+        if (poeng === 0) { alle = false; break; }
+        sum += poeng;
+      }
+      if (alle) resultat.push({ p: p, poeng: sum });
     }
-    return starter.concat(inneholder);
+
+    resultat.sort((a, b) => b.poeng - a.poeng || a.p.navn.length - b.p.navn.length);
+    return resultat.map((r) => r.p);
   }
 
   function highlight(navn, term) {
-    const i = navn.toLowerCase().indexOf(term.toLowerCase());
-    if (i === -1) return escapeHtml(navn);
-    return (
-      escapeHtml(navn.slice(0, i)) +
-      "<mark>" + escapeHtml(navn.slice(i, i + term.length)) + "</mark>" +
-      escapeHtml(navn.slice(i + term.length))
-    );
+    const tokens = term.toLowerCase().split(/\s+/).filter(Boolean);
+    const lav = navn.toLowerCase();
+    // finn eksakte forekomster av hvert søkeord og slå sammen områdene
+    const omrader = [];
+    for (const t of tokens) {
+      let fra = 0;
+      const i = lav.indexOf(t, fra);
+      if (i !== -1) omrader.push([i, i + t.length]);
+    }
+    if (omrader.length === 0) return escapeHtml(navn);
+    omrader.sort((a, b) => a[0] - b[0]);
+    const flettet = [omrader[0]];
+    for (const [s, e] of omrader.slice(1)) {
+      const sist = flettet[flettet.length - 1];
+      if (s <= sist[1]) sist[1] = Math.max(sist[1], e);
+      else flettet.push([s, e]);
+    }
+    let ut = "";
+    let pos = 0;
+    for (const [s, e] of flettet) {
+      ut += escapeHtml(navn.slice(pos, s)) + "<mark>" + escapeHtml(navn.slice(s, e)) + "</mark>";
+      pos = e;
+    }
+    return ut + escapeHtml(navn.slice(pos));
   }
 
   let gjeldendeTreff = [];
@@ -455,4 +549,14 @@
       searchInput.focus();
     }
   });
+
+  /* ---------- Installerbar app ---------- */
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {
+        /* uten service worker fungerer siden helt som før */
+      });
+    });
+  }
 })();
