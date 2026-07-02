@@ -37,3 +37,6 @@ jobs:
       - name: Publiser
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # GitHub Pages-køen kan tidvis være treg; vent inntil 30 minutter
+          timeout: 1800000
