@@ -1,63 +1,47 @@
 /* Røntgenprosedyrer – applikasjonslogikk.
-   Data leses fra prosedyrer_rontgen.json. */
+   Data leses fra prosedyrer_rontgen.json. Prosedyrene åpnes i ett felles
+   dokumentvindu i full skjermstørrelse, som gjenbrukes for hvert valg. */
 (function () {
   "use strict";
 
-  const nav = document.getElementById("nav");
+  const grid = document.getElementById("grid");
+  const noResults = document.getElementById("no-results");
   const searchInput = document.getElementById("search");
-  const btnVoksen = document.getElementById("btn-voksen");
-  const btnBarn = document.getElementById("btn-barn");
-  const segmented = document.querySelector(".segmented");
-  const brandSubtitle = document.getElementById("brand-subtitle");
-
-  const toolbar = document.getElementById("viewer-toolbar");
-  const viewerCategory = document.getElementById("viewer-category");
-  const viewerProcedure = document.getElementById("viewer-procedure");
-  const openExternal = document.getElementById("open-external");
-  const emptyState = document.getElementById("empty-state");
-  const loading = document.getElementById("loading");
-  const pdfFrame = document.getElementById("pdf-frame");
-
-  const themeToggle = document.getElementById("theme-toggle");
-  const themeIcon = themeToggle.querySelector(".theme-icon");
-  const themeLabel = themeToggle.querySelector(".theme-label");
-
   const netBanner = document.getElementById("net-banner");
   const netRetry = document.getElementById("net-retry");
-  const offlineState = document.getElementById("offline-state");
-  const offlineProcedure = document.getElementById("offline-procedure");
-  const offlineRetry = document.getElementById("offline-retry");
-  const offlineExternal = document.getElementById("offline-external");
-  const vinduState = document.getElementById("vindu-state");
-  const vinduProcedure = document.getElementById("vindu-procedure");
-  const vinduDetalj = document.getElementById("vindu-detalj");
-  const vinduOpen = document.getElementById("vindu-open");
-  const vinduRetry = document.getElementById("vindu-retry");
+  const themeToggle = document.getElementById("theme-toggle");
+  const themeIcon = themeToggle.querySelector(".theme-icon");
 
   // Tilstand
-  let gruppe = localStorage.getItem("gruppe") || "voksen"; // "voksen" | "barn"
-  let openCategories = new Set();
-  let activeUrl = null;
   let searchTerm = "";
-  let activeValg = null; // { kat, p } for sist valgte prosedyre
+  let activeUrl = null;
 
   // Nettstatus mot sykehusets dokumentserver:
   // "ukjent" | "tilkoblet" | "frakoblet"
   let nettStatus = "ukjent";
   let probeUrl = null;
 
-  // Husker at panelvisning er blokkert av innloggingen, slik at dokumenter
-  // åpnes rett i dokumentvinduet ved neste klikk.
-  let panelBlokkert = localStorage.getItem("panelBlokkert") === "1";
+  // Kategorier slått sammen på tvers av pasienttype:
+  // { navn, ikon, admin, voksen: [], barn: [] }
+  let KATEGORIER = [];
 
-  function settPanelBlokkert(v) {
-    panelBlokkert = v;
-    localStorage.setItem("panelBlokkert", v ? "1" : "0");
+  /* ---------- Tema ---------- */
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+    themeIcon.textContent = theme === "dark" ? "☀️" : "🌙";
   }
 
-  // Modell bygget fra JSON: { voksen: [kategori…], barn: [kategori…] }
-  // Hver kategori: { id, navn, ikon, admin, prosedyrer }
-  const MODEL = { voksen: [], barn: [] };
+  const savedTheme =
+    localStorage.getItem("theme") ||
+    (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  applyTheme(savedTheme);
+
+  themeToggle.addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    applyTheme(current === "dark" ? "light" : "dark");
+  });
 
   /* ---------- Ikoner per kategori ---------- */
 
@@ -77,52 +61,51 @@
   /* ---------- Datainnlasting ---------- */
 
   function buildModel(data) {
-    let seq = 0;
+    const perNavn = new Map();
     for (const entry of data.rontgen || []) {
       const admin = entry.type === "administrativ";
-      const kategori = {
-        id: "kat-" + seq++,
-        navn: entry.kategori,
-        ikon: iconFor(entry.kategori, admin),
-        admin: admin,
-        prosedyrer: entry.prosedyrer || []
-      };
-      if (admin) {
-        // Administrative kategorier vises i begge grupper
-        MODEL.voksen.push(kategori);
-        MODEL.barn.push(kategori);
-      } else if (entry.pasienttype === "barn") {
-        MODEL.barn.push(kategori);
-      } else {
-        MODEL.voksen.push(kategori);
+      let kat = perNavn.get(entry.kategori);
+      if (!kat) {
+        kat = {
+          navn: entry.kategori,
+          ikon: iconFor(entry.kategori, admin),
+          admin: admin,
+          voksen: [],
+          barn: []
+        };
+        perNavn.set(entry.kategori, kat);
+        KATEGORIER.push(kat);
+      }
+      const liste = entry.pasienttype === "barn" ? kat.barn : kat.voksen;
+      liste.push.apply(liste, entry.prosedyrer || []);
+
+      for (const p of entry.prosedyrer || []) {
+        if (!probeUrl && p.url.includes("sykehuspartner.no")) probeUrl = p.url;
       }
     }
     // Administrative kategorier legges sist
-    for (const g of ["voksen", "barn"]) {
-      MODEL[g].sort((a, b) => Number(a.admin) - Number(b.admin));
-    }
+    KATEGORIER.sort((a, b) => Number(a.admin) - Number(b.admin));
   }
 
-  function init(data) {
-    buildModel(data);
-    // Bruk første dokument-URL som «puls» mot sykehusets server
-    for (const g of ["voksen", "barn"]) {
-      for (const kat of MODEL[g]) {
-        for (const p of kat.prosedyrer) {
-          if (!probeUrl && p.url.includes("sykehuspartner.no")) probeUrl = p.url;
-        }
-      }
-    }
-    if (MODEL[gruppe].length > 0) openCategories.add(MODEL[gruppe][0].id);
-    setGruppe(gruppe);
-    probeNett();
-    setInterval(probeNett, 45000); // sjekk jevnlig, f.eks. ved bytte til VPN
-  }
+  fetch("prosedyrer_rontgen.json")
+    .then((res) => {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then((data) => {
+      buildModel(data);
+      render();
+      probeNett();
+      setInterval(probeNett, 45000); // sjekk jevnlig, f.eks. ved bytte til VPN
+    })
+    .catch((err) => {
+      noResults.textContent =
+        "Kunne ikke laste prosedyrelisten (" + String(err.message || err) + "). " +
+        "Hvis du åpnet siden direkte fra en fil, må den i stedet åpnes via en webserver.";
+      noResults.classList.remove("hidden");
+    });
 
-  /* ---------- Nettsjekk mot dokumentserveren ----------
-     En HEAD-forespørsel i "no-cors"-modus forteller oss om serveren i det
-     hele tatt svarer: løfter som innfris = serveren nås (vi er på
-     sykehusnettet), nettverksfeil = serveren nås ikke. */
+  /* ---------- Nettsjekk mot dokumentserveren ---------- */
 
   function probeNett() {
     if (!probeUrl) return;
@@ -133,151 +116,41 @@
       .catch(() => { nettStatus = "frakoblet"; })
       .finally(() => {
         clearTimeout(timer);
-        oppdaterNettUI();
+        netBanner.classList.toggle("hidden", nettStatus !== "frakoblet");
       });
   }
 
-  function oppdaterNettUI() {
-    netBanner.classList.toggle("hidden", nettStatus !== "frakoblet");
-    // Hvis en prosedyre er valgt, oppdater visningen i tråd med ny status
-    if (activeValg) {
-      if (nettStatus === "frakoblet") visOffline(activeValg.p);
-      else if (offlineState && !offlineState.classList.contains("hidden")) {
-        // Serveren kom tilbake – prøv å laste dokumentet på nytt
-        openProcedure(activeValg.kat, activeValg.p);
-      }
-    }
-  }
+  netRetry.addEventListener("click", probeNett);
 
-  function visOffline(p) {
-    offlineProcedure.textContent = p.navn;
-    offlineExternal.href = p.url;
-    offlineState.classList.remove("hidden");
-    emptyState.classList.add("hidden");
-    vinduState.classList.add("hidden");
-    loading.classList.add("hidden");
-    pdfFrame.classList.add("hidden");
-    pdfFrame.removeAttribute("src");
-  }
+  /* ---------- Dokumentvindu ---------- */
 
-  /* Åpner (eller gjenbruker) dokumentvinduet: ett navngitt vindu som legger
-     seg på høyre halvdel av skjermen. Samme vindu navigeres på nytt for hver
-     prosedyre, så det blir aldri mer enn ett. */
+  /* Åpner (eller gjenbruker) dokumentvinduet i full skjermstørrelse.
+     Samme navngitte vindu navigeres på nytt for hver prosedyre, så det blir
+     aldri mer enn ett. Ekte fullskjerm (F11) kan ikke startes utenfra av
+     sikkerhetsgrunner, men vinduet fyller hele den tilgjengelige skjermen. */
   function apneDokumentvindu(url) {
-    const bredde = Math.max(600, Math.floor(screen.availWidth / 2));
-    const venstre = screen.availWidth - bredde;
     const vindu = window.open(
       url,
       "prosedyreVindu",
-      "popup=yes,width=" + bredde + ",height=" + screen.availHeight +
-        ",left=" + venstre + ",top=0"
+      "popup=yes,width=" + screen.availWidth + ",height=" + screen.availHeight + ",left=0,top=0"
     );
     if (vindu) vindu.focus();
-    return !!vindu;
+    else window.open(url, "_blank"); // popup blokkert – fall tilbake til fane
   }
 
-  function visVindu(p, apnet) {
-    vinduProcedure.textContent = p.navn;
-    vinduDetalj.textContent = apnet
-      ? " er åpnet i dokumentvinduet."
-      : " åpnes i et eget vindu ved siden av.";
-    vinduState.classList.remove("hidden");
-    emptyState.classList.add("hidden");
-    offlineState.classList.add("hidden");
-    loading.classList.add("hidden");
-    pdfFrame.classList.add("hidden");
-    pdfFrame.removeAttribute("src");
-  }
-
-  netRetry.addEventListener("click", probeNett);
-  offlineRetry.addEventListener("click", probeNett);
-  vinduOpen.addEventListener("click", () => {
-    if (!activeValg) return;
-    const apnet = apneDokumentvindu(activeValg.p.url);
-    visVindu(activeValg.p, apnet);
-  });
-  vinduRetry.addEventListener("click", () => {
-    settPanelBlokkert(false);
-    if (activeValg) openProcedure(activeValg.kat, activeValg.p);
-  });
-
-  /* Oppdager om panelet ble blokkert (typisk fordi dokumentserveren
-     omdirigerte til innlogging, som nekter iframe-visning).
-     Chromium/Edge sin PDF-viser lager alltid en indre underramme, slik at
-     contentWindow.length er 1 når en PDF faktisk vises – og 0 når rammen
-     endte på en feil-/blokkeringsside. Egenskapen er lesbar på tvers av
-     domener. Vi sjekker noen ganger med litt mellomrom for å være sikre. */
-  function sjekkBlokkert(p, forsok) {
-    forsok = forsok || 0;
-    if (activeUrl !== p.url) return; // brukeren har valgt noe annet
-    let tomt = false;
-    try {
-      tomt = !!pdfFrame.contentWindow && pdfFrame.contentWindow.length === 0;
-    } catch (e) {
-      tomt = false; // får vi ikke lest, antar vi at dokumentet vises
-    }
-    if (!tomt) return; // PDF-viseren er på plass
-    if (forsok < 2) {
-      setTimeout(() => sjekkBlokkert(p, forsok + 1), 700);
+  function velgProsedyre(p) {
+    if (nettStatus === "frakoblet") {
+      // Ingen kontakt med serveren – pek på varselet i stedet for å åpne
+      netBanner.classList.remove("hidden", "pulse");
+      void netBanner.offsetWidth; // restart animasjonen
+      netBanner.classList.add("pulse");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    // Innloggingen blokkerer panelet – bytt til dokumentvindu-modus.
-    // (Vinduet kan ikke åpnes automatisk her, siden det krever et klikk.)
-    settPanelBlokkert(true);
-    visVindu(p, false);
+    activeUrl = p.url;
+    apneDokumentvindu(p.url);
+    render(); // oppdater aktiv markering
   }
-
-  fetch("prosedyrer_rontgen.json")
-    .then((res) => {
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return res.json();
-    })
-    .then(init)
-    .catch((err) => {
-      nav.innerHTML =
-        '<div class="no-results">Kunne ikke laste prosedyrelisten (' +
-        escapeHtml(String(err.message || err)) +
-        ").<br><br>Hvis du åpnet siden direkte fra en fil, må den i stedet " +
-        "åpnes via en webserver (f.eks. GitHub Pages).</div>";
-    });
-
-  /* ---------- Tema ---------- */
-
-  function applyTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-    const dark = theme === "dark";
-    themeIcon.textContent = dark ? "☀️" : "🌙";
-    themeLabel.textContent = dark ? "Lys modus" : "Mørk modus";
-  }
-
-  const savedTheme =
-    localStorage.getItem("theme") ||
-    (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  applyTheme(savedTheme);
-
-  themeToggle.addEventListener("click", () => {
-    const current = document.documentElement.getAttribute("data-theme");
-    applyTheme(current === "dark" ? "light" : "dark");
-  });
-
-  /* ---------- Voksen / Barn ---------- */
-
-  function setGruppe(g) {
-    gruppe = g;
-    localStorage.setItem("gruppe", g);
-    const barn = g === "barn";
-    segmented.classList.toggle("barn", barn);
-    btnVoksen.classList.toggle("active", !barn);
-    btnBarn.classList.toggle("active", barn);
-    btnVoksen.setAttribute("aria-selected", String(!barn));
-    btnBarn.setAttribute("aria-selected", String(barn));
-    brandSubtitle.textContent = barn ? "Barn" : "Voksen";
-    render();
-  }
-
-  btnVoksen.addEventListener("click", () => setGruppe("voksen"));
-  btnBarn.addEventListener("click", () => setGruppe("barn"));
 
   /* ---------- Søk ---------- */
 
@@ -303,114 +176,84 @@
     })[c]);
   }
 
-  /* ---------- Navigasjon ---------- */
+  /* ---------- Rendering ---------- */
 
-  function render() {
-    nav.innerHTML = "";
-    let anyResult = false;
-    let adminDividerAdded = false;
+  function lagKolonne(type, label, prosedyrer) {
+    const col = document.createElement("div");
+    col.className = "col";
 
-    for (const kat of MODEL[gruppe]) {
-      const prosedyrer = searchTerm
-        ? kat.prosedyrer.filter((p) => p.navn.toLowerCase().includes(searchTerm))
-        : kat.prosedyrer;
+    const head = document.createElement("div");
+    head.className = "col-label " + type;
+    head.innerHTML = '<span class="dot"></span>' + label;
+    col.appendChild(head);
 
-      if (prosedyrer.length === 0) continue;
-      anyResult = true;
-
-      if (kat.admin && !adminDividerAdded) {
-        const divider = document.createElement("div");
-        divider.className = "nav-divider";
-        divider.textContent = "Administrativt";
-        nav.appendChild(divider);
-        adminDividerAdded = true;
-      }
-
-      const open = searchTerm ? true : openCategories.has(kat.id);
-
-      const catEl = document.createElement("div");
-      catEl.className = "category" + (open ? " open" : "");
-
-      const catBtn = document.createElement("button");
-      catBtn.className = "category-btn";
-      catBtn.innerHTML =
-        '<span class="category-icon">' + kat.ikon + "</span>" +
-        '<span class="category-name">' + escapeHtml(kat.navn) + "</span>" +
-        '<span class="category-count">' + prosedyrer.length + "</span>" +
-        '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>';
-      catBtn.addEventListener("click", () => {
-        if (openCategories.has(kat.id)) openCategories.delete(kat.id);
-        else openCategories.add(kat.id);
-        render();
-      });
-      catEl.appendChild(catBtn);
-
-      const list = document.createElement("div");
-      list.className = "procedures";
-      for (const p of prosedyrer) {
-        const pBtn = document.createElement("button");
-        pBtn.className = "procedure-btn" + (p.url === activeUrl ? " active" : "");
-        pBtn.innerHTML = highlight(p.navn);
-        pBtn.addEventListener("click", () => openProcedure(kat, p));
-        list.appendChild(pBtn);
-      }
-      catEl.appendChild(list);
-      nav.appendChild(catEl);
+    if (prosedyrer.length === 0) {
+      const tom = document.createElement("div");
+      tom.className = "col-tom";
+      tom.textContent = "Ingen treff";
+      col.appendChild(tom);
+      return col;
     }
 
-    if (!anyResult) {
-      const msg = document.createElement("div");
-      msg.className = "no-results";
-      msg.textContent = searchTerm
-        ? "Ingen prosedyrer samsvarer med «" + searchInput.value.trim() + "»."
-        : "Ingen prosedyrer i denne gruppen ennå.";
-      nav.appendChild(msg);
+    for (const p of prosedyrer) {
+      const btn = document.createElement("button");
+      btn.className = "procedure-btn" + (p.url === activeUrl ? " active" : "");
+      btn.innerHTML = highlight(p.navn);
+      btn.title = "Åpne i dokumentvinduet";
+      btn.addEventListener("click", () => velgProsedyre(p));
+      col.appendChild(btn);
     }
+    return col;
   }
 
-  /* ---------- Åpne prosedyre ---------- */
+  function render() {
+    grid.innerHTML = "";
+    let antallTreff = 0;
 
-  function openProcedure(kat, p) {
-    activeUrl = p.url;
-    activeValg = { kat: kat, p: p };
+    for (const kat of KATEGORIER) {
+      const voksen = searchTerm
+        ? kat.voksen.filter((p) => p.navn.toLowerCase().includes(searchTerm))
+        : kat.voksen;
+      const barn = searchTerm
+        ? kat.barn.filter((p) => p.navn.toLowerCase().includes(searchTerm))
+        : kat.barn;
 
-    viewerCategory.textContent = kat.navn;
-    viewerProcedure.textContent = p.navn;
-    openExternal.href = p.url;
-    toolbar.classList.remove("hidden");
+      const antall = voksen.length + barn.length;
+      if (antall === 0) continue; // skjul kort uten treff
+      antallTreff += antall;
 
-    if (nettStatus === "frakoblet") {
-      visOffline(p);
-      render();
-      probeNett(); // dobbeltsjekk i tilfelle nettet nettopp kom tilbake
-      return;
+      const card = document.createElement("section");
+      card.className = "card";
+
+      const head = document.createElement("header");
+      head.className = "card-head";
+      head.innerHTML =
+        '<span class="card-icon">' + kat.ikon + "</span>" +
+        '<span class="card-name">' + escapeHtml(kat.navn) + "</span>" +
+        '<span class="card-count">' + antall + "</span>";
+      card.appendChild(head);
+
+      const cols = document.createElement("div");
+      const harVoksen = kat.voksen.length > 0;
+      const harBarn = kat.barn.length > 0;
+
+      if (kat.admin) {
+        cols.className = "card-cols single";
+        cols.appendChild(lagKolonne("felles", "Felles", voksen.concat(barn)));
+      } else if (harVoksen && harBarn) {
+        cols.className = "card-cols";
+        cols.appendChild(lagKolonne("voksen", "Voksen", voksen));
+        cols.appendChild(lagKolonne("barn", "Barn", barn));
+      } else {
+        cols.className = "card-cols single";
+        if (harVoksen) cols.appendChild(lagKolonne("voksen", "Voksen", voksen));
+        else cols.appendChild(lagKolonne("barn", "Barn", barn));
+      }
+
+      card.appendChild(cols);
+      grid.appendChild(card);
     }
 
-    // Er panelet allerede kjent blokkert, eller kan filen aldri vises der
-    // (f.eks. SharePoint-dokumenter)? Da rett i dokumentvinduet – klikket på
-    // prosedyren teller som brukerhandling, så vinduet kan åpnes direkte.
-    if (panelBlokkert || !/\.pdf(\?|#|$)/i.test(p.url)) {
-      const apnet = apneDokumentvindu(p.url);
-      visVindu(p, apnet);
-      render();
-      return;
-    }
-
-    emptyState.classList.add("hidden");
-    offlineState.classList.add("hidden");
-    vinduState.classList.add("hidden");
-    loading.classList.remove("hidden");
-
-    pdfFrame.classList.remove("hidden");
-    pdfFrame.onload = () => {
-      loading.classList.add("hidden");
-      setTimeout(() => sjekkBlokkert(p, 0), 500);
-    };
-    pdfFrame.src = p.url;
-
-    // Fallback: skjul lastindikatoren selv om onload aldri fyrer
-    setTimeout(() => loading.classList.add("hidden"), 8000);
-
-    render(); // oppdater aktiv markering
+    noResults.classList.toggle("hidden", antallTreff > 0);
   }
 })();

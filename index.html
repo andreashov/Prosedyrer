@@ -8,119 +8,44 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app">
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <header class="sidebar-header">
-        <div class="brand">
-          <div class="brand-icon">🩻</div>
-          <div class="brand-text">
-            <h1>Røntgenprosedyrer</h1>
-            <span id="brand-subtitle">Voksen</span>
-          </div>
-        </div>
-
-        <!-- Voksen / Barn -->
-        <div class="segmented" role="tablist" aria-label="Pasientgruppe">
-          <button id="btn-voksen" class="segment active" role="tab" aria-selected="true">Voksen</button>
-          <button id="btn-barn" class="segment" role="tab" aria-selected="false">Barn</button>
-          <div class="segment-glider"></div>
-        </div>
-
-        <!-- Søk -->
-        <div class="search-wrap">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>
-          </svg>
-          <input id="search" type="search" placeholder="Søk etter prosedyre …" autocomplete="off">
-        </div>
-      </header>
-
-      <nav id="nav" class="nav" aria-label="Kategorier og prosedyrer"></nav>
-
-      <footer class="sidebar-footer">
-        <button id="theme-toggle" class="theme-toggle" title="Bytt mellom lyst og mørkt tema">
-          <span class="theme-icon">🌙</span><span class="theme-label">Mørk modus</span>
-        </button>
-      </footer>
-    </aside>
-
-    <!-- Viewer -->
-    <main class="viewer">
-      <!-- Varsel når sykehusets dokumentserver ikke nås -->
-      <div id="net-banner" class="net-banner hidden">
-        <span class="net-banner-icon">⚠️</span>
-        <span class="net-banner-text">
-          Ingen kontakt med sykehusets dokumentserver. Prosedyrene kan bare
-          åpnes fra sykehusets nettverk.
-        </span>
-        <button id="net-retry" class="net-retry">Prøv igjen</button>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">🩻</div>
+      <div class="brand-text">
+        <h1>Røntgenprosedyrer</h1>
+        <span>Dokumentene åpnes i eget vindu</span>
       </div>
+    </div>
 
-      <div id="viewer-toolbar" class="viewer-toolbar hidden">
-        <div class="viewer-title">
-          <span id="viewer-category" class="viewer-crumb"></span>
-          <span class="viewer-sep">/</span>
-          <span id="viewer-procedure" class="viewer-name"></span>
-        </div>
-        <div class="viewer-actions">
-          <a id="open-external" href="#" target="_blank" rel="noopener" class="btn-ghost" title="Åpne i ny fane">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-              <polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
-            </svg>
-            Ny fane
-          </a>
-        </div>
-      </div>
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+      </svg>
+      <input id="search" type="search" placeholder="Søk etter prosedyre …" autocomplete="off">
+    </div>
 
-      <div id="viewer-body" class="viewer-body">
-        <!-- Tom tilstand -->
-        <div id="empty-state" class="empty-state">
-          <div class="empty-icon">🩻</div>
-          <h2>Velg en prosedyre</h2>
-          <p>Velg en kategori i menyen til venstre, og deretter en prosedyre.<br>Dokumentet åpnes her.</p>
-        </div>
+    <button id="theme-toggle" class="theme-toggle" title="Bytt mellom lyst og mørkt tema">
+      <span class="theme-icon">🌙</span>
+    </button>
+  </header>
 
-        <!-- Dokumentserver utilgjengelig -->
-        <div id="offline-state" class="empty-state hidden">
-          <div class="empty-icon">📡</div>
-          <h2>Får ikke kontakt med dokumentserveren</h2>
-          <p>
-            <strong id="offline-procedure"></strong> kan ikke hentes akkurat nå.
-            Prosedyrene ligger på sykehusets interne server og kan bare åpnes
-            fra sykehusets nettverk.
-          </p>
-          <div class="offline-actions">
-            <button id="offline-retry" class="btn-accent">Prøv igjen</button>
-            <a id="offline-external" href="#" target="_blank" rel="noopener" class="btn-ghost">Åpne i ny fane likevel</a>
-          </div>
-        </div>
-
-        <!-- Dokumentet vises i eget vindu (innlogging hindrer panelvisning) -->
-        <div id="vindu-state" class="empty-state hidden">
-          <div class="empty-icon">🪟</div>
-          <h2>Dokumentet vises i eget vindu</h2>
-          <p>
-            <strong id="vindu-procedure"></strong><span id="vindu-detalj"></span><br>
-            Sykehusets innlogging hindrer at dokumenter vises direkte på siden.
-            Dokumentvinduet legger seg ved siden av og gjenbrukes for hver
-            prosedyre du velger.
-          </p>
-          <div class="offline-actions">
-            <button id="vindu-open" class="btn-accent">Åpne dokumentet</button>
-            <button id="vindu-retry" class="btn-ghost">Prøv panelvisning igjen</button>
-          </div>
-        </div>
-
-        <div id="loading" class="loading hidden"><div class="spinner"></div><span>Laster dokument …</span></div>
-
-        <iframe id="pdf-frame" class="pdf-frame hidden" title="Prosedyredokument"></iframe>
-      </div>
-    </main>
+  <!-- Varsel når sykehusets dokumentserver ikke nås -->
+  <div id="net-banner" class="net-banner hidden">
+    <span class="net-banner-icon">⚠️</span>
+    <span class="net-banner-text">
+      Ingen kontakt med sykehusets dokumentserver. Prosedyrene kan bare
+      åpnes fra sykehusets nettverk.
+    </span>
+    <button id="net-retry" class="net-retry">Prøv igjen</button>
   </div>
 
-  <script src="app.js"></script>
+  <main id="grid" class="grid" aria-label="Prosedyrer etter kroppsregion"></main>
+
+  <div id="no-results" class="no-results hidden">
+    Ingen prosedyrer samsvarer med søket.
+  </div>
+
 </body>
+<script src="app.js"></script>
 </html>

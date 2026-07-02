@@ -1,8 +1,9 @@
 # Røntgenprosedyrer
 
 En enkel, rask og stilig side for visning av røntgenprosedyrer ved Sykehuset
-Østfold. Prosedyrene er organisert etter anatomisk plassering og delt inn i
-**voksen** og **barn**. PDF-dokumentene åpnes direkte i høyre del av siden.
+Østfold. Prosedyrene er organisert i kort per kroppsregion, med **voksen** og
+**barn** synlig side om side. Dokumentene åpnes i ett felles dokumentvindu i
+full skjermstørrelse som gjenbrukes for hver prosedyre.
 
 **Siden er publisert her: <https://andreashov.github.io/Prosedyrer/>**
 
@@ -35,26 +36,25 @@ Siden publiseres automatisk til GitHub Pages av workflowen i
 [`.github/workflows/pages.yml`](.github/workflows/pages.yml) hver gang det
 pushes til `main`. Ingen byggeverktøy kreves – siden er ren HTML/CSS/JS.
 
-## Viktig om PDF-visning i siden
+## Hvorfor eget dokumentvindu?
 
-PDF-ene forsøkes først vist i en innebygd ramme i høyre panel. Sykehusets
-dokumentserver sender imidlertid forespørsler videre til innloggingstjenesten
-(SSO), og nettleseren nekter å dele innloggingen med rammer som er innebygd i
-sider fra andre domener (SameSite-regelen). Siden oppdager dette selv og
-bytter da til et **dokumentvindu**: ett eget vindu som legger seg på høyre
-halvdel av skjermen og gjenbrukes for hver prosedyre som velges. Valget
-huskes; knappen «Prøv panelvisning igjen» nullstiller det.
+Sykehusets dokumentserver sender forespørsler via innloggingstjenesten (SSO),
+og nettleseren nekter å dele innloggingen med rammer som er innebygd i sider
+fra andre domener (SameSite-regelen). Innebygd visning på selve siden er
+derfor ikke mulig så lenge siden hostes på GitHub Pages. I stedet åpnes
+dokumentene i ett navngitt vindu i full skjermstørrelse som gjenbrukes for
+hver prosedyre – det blir aldri mer enn ett dokumentvindu.
 
-Skal panelvisning fungere fullt ut, må siden hostes på sykehusets eget nett
-(samme «site» som dokumentserveren, f.eks. en intern webserver hos
-Sykehuspartner). Siden er fire statiske filer og kan flyttes dit uendret.
+Skulle siden senere flyttes til sykehusets eget nett (samme «site» som
+dokumentserveren), kan innebygd visning gjeninnføres. Siden er fire statiske
+filer og kan flyttes dit uendret.
 
 ## Funksjoner
 
-- Kategorier etter anatomisk plassering, med antall prosedyrer per kategori
-- Bryter for **Voksen / Barn** (valget huskes)
-- Egen seksjon for administrative prosedyrer
-- Søk på tvers av alle kategorier med utheving av treff
-- PDF-visning i høyre panel, med «Åpne i ny fane» som fallback
+- Kort per kroppsregion med **Voksen og Barn synlig samtidig**
+- Eget kort for administrative prosedyrer («Direkte»)
+- Søk på tvers av alt med utheving av treff; kort uten treff skjules
+- Dokumentene åpnes i ett gjenbrukt dokumentvindu i full skjermstørrelse
+- Varsel når sykehusets dokumentserver ikke nås (utenfor sykehusnettet)
 - Lyst og mørkt tema (følger systeminnstilling, kan overstyres – huskes)
 - Fungerer på mobil og nettbrett
