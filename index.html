@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Røntgenprosedyrer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩻</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <header class="sidebar-header">
+        <div class="brand">
+          <div class="brand-icon">🩻</div>
+          <div class="brand-text">
+            <h1>Røntgenprosedyrer</h1>
+            <span id="brand-subtitle">Voksen</span>
+          </div>
+        </div>
+
+        <!-- Voksen / Barn -->
+        <div class="segmented" role="tablist" aria-label="Pasientgruppe">
+          <button id="btn-voksen" class="segment active" role="tab" aria-selected="true">Voksen</button>
+          <button id="btn-barn" class="segment" role="tab" aria-selected="false">Barn</button>
+          <div class="segment-glider"></div>
+        </div>
+
+        <!-- Søk -->
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+          </svg>
+          <input id="search" type="search" placeholder="Søk etter prosedyre …" autocomplete="off">
+        </div>
+      </header>
+
+      <nav id="nav" class="nav" aria-label="Kategorier og prosedyrer"></nav>
+
+      <footer class="sidebar-footer">
+        <button id="theme-toggle" class="theme-toggle" title="Bytt mellom lyst og mørkt tema">
+          <span class="theme-icon">🌙</span><span class="theme-label">Mørk modus</span>
+        </button>
+      </footer>
+    </aside>
+
+    <!-- Viewer -->
+    <main class="viewer">
+      <div id="viewer-toolbar" class="viewer-toolbar hidden">
+        <div class="viewer-title">
+          <span id="viewer-category" class="viewer-crumb"></span>
+          <span class="viewer-sep">/</span>
+          <span id="viewer-procedure" class="viewer-name"></span>
+        </div>
+        <div class="viewer-actions">
+          <a id="open-external" href="#" target="_blank" rel="noopener" class="btn-ghost" title="Åpne i ny fane">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+            Ny fane
+          </a>
+        </div>
+      </div>
+
+      <div id="viewer-body" class="viewer-body">
+        <!-- Tom tilstand -->
+        <div id="empty-state" class="empty-state">
+          <div class="empty-icon">🩻</div>
+          <h2>Velg en prosedyre</h2>
+          <p>Velg en kategori i menyen til venstre, og deretter en prosedyre.<br>Dokumentet åpnes her.</p>
+        </div>
+
+        <!-- Ingen søketreff -->
+        <div id="loading" class="loading hidden"><div class="spinner"></div><span>Laster dokument …</span></div>
+
+        <iframe id="pdf-frame" class="pdf-frame hidden" title="Prosedyredokument"></iframe>
+      </div>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
