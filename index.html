@@ -98,6 +98,22 @@
           </div>
         </div>
 
+        <!-- Dokumentet krever innlogging (SSO nekter iframe-visning) -->
+        <div id="auth-state" class="empty-state hidden">
+          <div class="empty-icon">🔐</div>
+          <h2>Dokumentet krever innlogging</h2>
+          <p>
+            <strong id="auth-procedure"></strong> sendes via sykehusets
+            innloggingstjeneste, som ikke kan vises inne i panelet.
+            Åpne dokumentet i ny fane og logg inn ved behov &ndash; etterpå kan du
+            prøve panelet igjen.
+          </p>
+          <div class="offline-actions">
+            <a id="auth-external" href="#" target="_blank" rel="noopener" class="btn-accent">Åpne i ny fane</a>
+            <button id="auth-retry" class="btn-ghost">Prøv igjen i panelet</button>
+          </div>
+        </div>
+
         <div id="loading" class="loading hidden"><div class="spinner"></div><span>Laster dokument …</span></div>
 
         <iframe id="pdf-frame" class="pdf-frame hidden" title="Prosedyredokument"></iframe>

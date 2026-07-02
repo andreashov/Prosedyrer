@@ -28,6 +28,10 @@
   const offlineProcedure = document.getElementById("offline-procedure");
   const offlineRetry = document.getElementById("offline-retry");
   const offlineExternal = document.getElementById("offline-external");
+  const authState = document.getElementById("auth-state");
+  const authProcedure = document.getElementById("auth-procedure");
+  const authRetry = document.getElementById("auth-retry");
+  const authExternal = document.getElementById("auth-external");
 
   // Tilstand
   let gruppe = localStorage.getItem("gruppe") || "voksen"; // "voksen" | "barn"
@@ -140,6 +144,18 @@
     offlineExternal.href = p.url;
     offlineState.classList.remove("hidden");
     emptyState.classList.add("hidden");
+    authState.classList.add("hidden");
+    loading.classList.add("hidden");
+    pdfFrame.classList.add("hidden");
+    pdfFrame.removeAttribute("src");
+  }
+
+  function visAuth(p) {
+    authProcedure.textContent = p.navn;
+    authExternal.href = p.url;
+    authState.classList.remove("hidden");
+    emptyState.classList.add("hidden");
+    offlineState.classList.add("hidden");
     loading.classList.add("hidden");
     pdfFrame.classList.add("hidden");
     pdfFrame.removeAttribute("src");
@@ -147,6 +163,32 @@
 
   netRetry.addEventListener("click", probeNett);
   offlineRetry.addEventListener("click", probeNett);
+  authRetry.addEventListener("click", () => {
+    if (activeValg) openProcedure(activeValg.kat, activeValg.p);
+  });
+
+  /* Oppdager om panelet ble blokkert (typisk fordi dokumentserveren
+     omdirigerte til innlogging, som nekter iframe-visning).
+     Chromium/Edge sin PDF-viser lager alltid en indre underramme, slik at
+     contentWindow.length er 1 når en PDF faktisk vises – og 0 når rammen
+     endte på en feil-/blokkeringsside. Egenskapen er lesbar på tvers av
+     domener. Vi sjekker noen ganger med litt mellomrom for å være sikre. */
+  function sjekkBlokkert(p, forsok) {
+    forsok = forsok || 0;
+    if (activeUrl !== p.url) return; // brukeren har valgt noe annet
+    let tomt = false;
+    try {
+      tomt = !!pdfFrame.contentWindow && pdfFrame.contentWindow.length === 0;
+    } catch (e) {
+      tomt = false; // får vi ikke lest, antar vi at dokumentet vises
+    }
+    if (!tomt) return; // PDF-viseren er på plass
+    if (forsok < 2) {
+      setTimeout(() => sjekkBlokkert(p, forsok + 1), 700);
+      return;
+    }
+    visAuth(p);
+  }
 
   fetch("prosedyrer_rontgen.json")
     .then((res) => {
@@ -309,13 +351,25 @@
 
     emptyState.classList.add("hidden");
     offlineState.classList.add("hidden");
+    authState.classList.add("hidden");
     loading.classList.remove("hidden");
-    pdfFrame.classList.remove("hidden");
 
-    pdfFrame.onload = () => loading.classList.add("hidden");
+    // Filer som ikke er PDF (f.eks. SharePoint-dokumenter) kan aldri vises
+    // i panelet – de krever innlogging og egen fane.
+    if (!/\.pdf(\?|#|$)/i.test(p.url)) {
+      visAuth(p);
+      render();
+      return;
+    }
+
+    pdfFrame.classList.remove("hidden");
+    pdfFrame.onload = () => {
+      loading.classList.add("hidden");
+      setTimeout(() => sjekkBlokkert(p, 0), 500);
+    };
     pdfFrame.src = p.url;
 
-    // Fallback: skjul lastindikatoren etter en stund selv om onload aldri fyrer
+    // Fallback: skjul lastindikatoren selv om onload aldri fyrer
     setTimeout(() => loading.classList.add("hidden"), 8000);
 
     render(); // oppdater aktiv markering
