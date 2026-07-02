@@ -37,17 +37,6 @@
     </div>
   </header>
 
-  <!-- Varsel når sykehusets dokumentserver ikke nås -->
-  <div id="net-banner" class="net-banner hidden">
-    <span>⚠️&ensp;Ingen kontakt med sykehusets dokumentserver &ndash; prosedyrene kan bare åpnes fra sykehusets nettverk.</span>
-    <button id="net-retry" class="net-retry">Prøv igjen</button>
-    <button id="net-lukk" class="net-lukk" title="Lukk varselet" aria-label="Lukk varselet">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-        <line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>
-      </svg>
-    </button>
-  </div>
-
   <section class="hero">
     <div id="spotlight" class="spotlight">
       <div class="spotlight-field">
@@ -71,6 +60,21 @@
   <main id="board" class="board" aria-live="polite"></main>
 
   <div id="backdrop" class="backdrop hidden"></div>
+
+  <!-- Diskret varsel nede til høyre når dokumentserveren ikke nås -->
+  <div id="net-banner" class="toast hidden" role="status">
+    <span class="toast-dot"></span>
+    <span class="toast-text">
+      Ingen kontakt med sykehusets dokumentserver.<br>
+      <span class="toast-under">Prosedyrene kan bare åpnes fra sykehusets nettverk.</span>
+    </span>
+    <button id="net-retry" class="toast-retry" title="Sjekk tilkoblingen på nytt">Prøv igjen</button>
+    <button id="net-lukk" class="toast-lukk" title="Lukk varselet" aria-label="Lukk varselet">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line>
+      </svg>
+    </button>
+  </div>
 
 </body>
 <script src="app.js"></script>

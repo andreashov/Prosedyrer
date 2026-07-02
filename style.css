@@ -123,45 +123,80 @@ body {
 .theme-toggle:hover { background: var(--seg-track); color: var(--text); }
 .theme-toggle svg { width: 17px; height: 17px; }
 
-/* ---------- Nettvarsel ---------- */
+/* ---------- Nettvarsel: diskret toast nede til høyre ---------- */
 
-.net-banner {
+.toast {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 60;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 8px clamp(16px, 2.5vw, 36px);
-  background: #fdf1d0;
-  color: #6b5518;
-  border-bottom: 1px solid #eee0b0;
-  font-size: 13px;
+  gap: 12px;
+  max-width: 420px;
+  padding: 13px 12px 13px 16px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  box-shadow: var(--pop-shadow);
+  animation: toastInn 0.4s var(--ease) both;
+}
+
+@keyframes toastInn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast.pulse { animation: toastInn 0.4s var(--ease) both, pulse 0.5s ease 2; }
+@keyframes pulse { 50% { transform: scale(1.02); } }
+
+.toast-dot {
   flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e8a13c;
+  box-shadow: 0 0 0 4px rgba(232, 161, 60, 0.18);
 }
 
-[data-theme="dark"] .net-banner {
-  background: #38310f;
-  color: #eed88c;
-  border-bottom-color: #4d4415;
+.toast-text {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 590;
+  color: var(--text);
+  line-height: 1.45;
 }
 
-.net-banner.pulse { animation: pulse 0.5s ease 2; }
-@keyframes pulse { 50% { filter: brightness(0.88); } }
+.toast-under {
+  font-weight: 400;
+  font-size: 12.5px;
+  color: var(--dim);
+}
 
-.net-retry {
-  border: 1px solid currentColor;
+.toast-retry {
+  flex-shrink: 0;
+  border: 1px solid var(--hairline);
   background: transparent;
-  color: inherit;
-  padding: 3px 12px;
+  color: var(--text-2);
+  padding: 6px 13px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
+  transition: background 0.15s var(--ease);
 }
 
-.net-retry:hover { opacity: 0.7; }
+.toast-retry:hover { background: var(--seg-track); }
 
-.net-lukk {
+.toast-lukk {
+  flex-shrink: 0;
   width: 26px;
   height: 26px;
   display: grid;
@@ -169,20 +204,17 @@ body {
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: inherit;
-  opacity: 0.65;
+  color: var(--faint);
   cursor: pointer;
-  transition: opacity 0.15s var(--ease), background 0.15s var(--ease);
+  transition: color 0.15s var(--ease), background 0.15s var(--ease);
 }
 
-.net-lukk:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.08);
+.toast-lukk:hover {
+  color: var(--text);
+  background: var(--seg-track);
 }
 
-[data-theme="dark"] .net-lukk:hover { background: rgba(255, 255, 255, 0.1); }
-
-.net-lukk svg { width: 12px; height: 12px; }
+.toast-lukk svg { width: 12px; height: 12px; }
 
 /* ---------- Hero: Spotlight + glidebryter ---------- */
 
