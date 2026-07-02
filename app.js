@@ -1,4 +1,5 @@
-/* Røntgenprosedyrer – applikasjonslogikk */
+/* Røntgenprosedyrer – applikasjonslogikk.
+   Data leses fra prosedyrer_rontgen.json. */
 (function () {
   "use strict";
 
@@ -25,6 +26,75 @@
   let gruppe = localStorage.getItem("gruppe") || "voksen"; // "voksen" | "barn"
   let openCategories = new Set();
   let activeUrl = null;
+  let searchTerm = "";
+
+  // Modell bygget fra JSON: { voksen: [kategori…], barn: [kategori…] }
+  // Hver kategori: { id, navn, ikon, admin, prosedyrer }
+  const MODEL = { voksen: [], barn: [] };
+
+  /* ---------- Ikoner per kategori ---------- */
+
+  function iconFor(navn, admin) {
+    if (admin) return "📋";
+    const n = navn.toLowerCase();
+    if (n.includes("caput") || n.includes("hode")) return "🧠";
+    if (n.includes("thorax") || n.includes("abdomen")) return "🫁";
+    if (n.includes("columna")) return "🦴";
+    if (n.includes("bekken") || n.includes("hofte")) return "🩻";
+    if (n.includes("overekstremitet")) return "💪";
+    if (n.includes("underekstremitet")) return "🦵";
+    if (n.includes("spesial")) return "🔬";
+    return "🩻";
+  }
+
+  /* ---------- Datainnlasting ---------- */
+
+  function buildModel(data) {
+    let seq = 0;
+    for (const entry of data.rontgen || []) {
+      const admin = entry.type === "administrativ";
+      const kategori = {
+        id: "kat-" + seq++,
+        navn: entry.kategori,
+        ikon: iconFor(entry.kategori, admin),
+        admin: admin,
+        prosedyrer: entry.prosedyrer || []
+      };
+      if (admin) {
+        // Administrative kategorier vises i begge grupper
+        MODEL.voksen.push(kategori);
+        MODEL.barn.push(kategori);
+      } else if (entry.pasienttype === "barn") {
+        MODEL.barn.push(kategori);
+      } else {
+        MODEL.voksen.push(kategori);
+      }
+    }
+    // Administrative kategorier legges sist
+    for (const g of ["voksen", "barn"]) {
+      MODEL[g].sort((a, b) => Number(a.admin) - Number(b.admin));
+    }
+  }
+
+  function init(data) {
+    buildModel(data);
+    if (MODEL[gruppe].length > 0) openCategories.add(MODEL[gruppe][0].id);
+    setGruppe(gruppe);
+  }
+
+  fetch("prosedyrer_rontgen.json")
+    .then((res) => {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.json();
+    })
+    .then(init)
+    .catch((err) => {
+      nav.innerHTML =
+        '<div class="no-results">Kunne ikke laste prosedyrelisten (' +
+        escapeHtml(String(err.message || err)) +
+        ").<br><br>Hvis du åpnet siden direkte fra en fil, må den i stedet " +
+        "åpnes via en webserver (f.eks. GitHub Pages).</div>";
+    });
 
   /* ---------- Tema ---------- */
 
@@ -66,7 +136,6 @@
 
   /* ---------- Søk ---------- */
 
-  let searchTerm = "";
   searchInput.addEventListener("input", () => {
     searchTerm = searchInput.value.trim().toLowerCase();
     render();
@@ -94,16 +163,23 @@
   function render() {
     nav.innerHTML = "";
     let anyResult = false;
+    let adminDividerAdded = false;
 
-    for (const kat of PROSEDYRE_DATA.kategorier) {
-      const alle = kat[gruppe] || [];
+    for (const kat of MODEL[gruppe]) {
       const prosedyrer = searchTerm
-        ? alle.filter((p) => p.navn.toLowerCase().includes(searchTerm))
-        : alle;
+        ? kat.prosedyrer.filter((p) => p.navn.toLowerCase().includes(searchTerm))
+        : kat.prosedyrer;
 
-      // Skjul tomme kategorier ved søk; vis tomme kategorier ellers ikke heller
       if (prosedyrer.length === 0) continue;
       anyResult = true;
+
+      if (kat.admin && !adminDividerAdded) {
+        const divider = document.createElement("div");
+        divider.className = "nav-divider";
+        divider.textContent = "Administrativt";
+        nav.appendChild(divider);
+        adminDividerAdded = true;
+      }
 
       const open = searchTerm ? true : openCategories.has(kat.id);
 
@@ -169,12 +245,4 @@
 
     render(); // oppdater aktiv markering
   }
-
-  /* ---------- Init ---------- */
-
-  // Åpne første kategori som standard, og sett riktig gruppe
-  if (PROSEDYRE_DATA.kategorier.length > 0) {
-    openCategories.add(PROSEDYRE_DATA.kategorier[0].id);
-  }
-  setGruppe(gruppe);
 })();
