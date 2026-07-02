@@ -19,6 +19,7 @@
   const iconMoon = document.getElementById("icon-moon");
   const iconSun = document.getElementById("icon-sun");
   const vinduToggle = document.getElementById("vindu-toggle");
+  const iconNytt = document.getElementById("icon-nytt");
   const iconFull = document.getElementById("icon-full");
   const iconHalv = document.getElementById("icon-halv");
 
@@ -132,12 +133,16 @@
 
   /* ---------- Dokumentvindu ---------- */
 
-  /* Ett navngitt vindu som gjenbrukes for hver prosedyre. To størrelser:
-     "full" (hele den tilgjengelige skjermen) eller "hoyre" (høyre halvdel i
-     full høyde, side om side med denne siden). Ekte fullskjerm (F11) kan
-     ikke startes utenfra av sikkerhetsgrunner – men trykkes F11 én gang i
-     dokumentvinduet, forblir det i fullskjerm siden vinduet gjenbrukes. */
-  let vinduModus = localStorage.getItem("vinduModus") || "full"; // "full" | "hoyre"
+  /* Tre måter å åpne dokumentene på:
+     - "nytt":  et vanlig nytt nettleservindu, akkurat som høyreklikk →
+                «Åpne kobling i nytt vindu». Arver maksimert/fullskjerm-
+                tilstand fra nettleseren. (noopener i features gjør at
+                Chromium/Edge åpner et ekte vindu, ikke en fane.)
+     - "full":  ett gjenbrukt popup-vindu i hele den tilgjengelige skjermen.
+     - "hoyre": ett gjenbrukt popup-vindu i høyre halvdel, full høyde. */
+  const VINDU_MODI = ["nytt", "full", "hoyre"];
+  let vinduModus = localStorage.getItem("vinduModus2") || "nytt";
+  if (VINDU_MODI.indexOf(vinduModus) === -1) vinduModus = "nytt";
   let dokVindu = null;
 
   function vinduGeometri() {
@@ -149,6 +154,10 @@
   }
 
   function apneDokumentvindu(url) {
+    if (vinduModus === "nytt") {
+      window.open(url, "_blank", "noopener");
+      return;
+    }
     const g = vinduGeometri();
     const vindu = window.open(
       url,
@@ -163,21 +172,25 @@
     vindu.focus();
   }
 
+  const VINDU_TITLER = {
+    nytt: "Dokumenter åpnes i nytt nettleservindu (som «Åpne i nytt vindu») – klikk for popup i hele skjermen",
+    full: "Dokumenter åpnes i ett gjenbrukt vindu i hele skjermen – klikk for høyre halvdel",
+    hoyre: "Dokumenter åpnes i ett gjenbrukt vindu i høyre halvdel – klikk for nytt nettleservindu"
+  };
+
   function oppdaterVinduToggle() {
-    const full = vinduModus === "full";
-    iconFull.classList.toggle("hidden", !full);
-    iconHalv.classList.toggle("hidden", full);
-    vinduToggle.title = full
-      ? "Dokumentvinduet fyller hele skjermen – klikk for høyre halvdel"
-      : "Dokumentvinduet fyller høyre halvdel – klikk for hele skjermen";
+    iconNytt.classList.toggle("hidden", vinduModus !== "nytt");
+    iconFull.classList.toggle("hidden", vinduModus !== "full");
+    iconHalv.classList.toggle("hidden", vinduModus !== "hoyre");
+    vinduToggle.title = VINDU_TITLER[vinduModus];
   }
 
   vinduToggle.addEventListener("click", () => {
-    vinduModus = vinduModus === "full" ? "hoyre" : "full";
-    localStorage.setItem("vinduModus", vinduModus);
+    vinduModus = VINDU_MODI[(VINDU_MODI.indexOf(vinduModus) + 1) % VINDU_MODI.length];
+    localStorage.setItem("vinduModus2", vinduModus);
     oppdaterVinduToggle();
-    // Er dokumentvinduet åpent, endres størrelsen med en gang
-    if (dokVindu && !dokVindu.closed) {
+    // Er popup-vinduet åpent, endres størrelsen med en gang
+    if (vinduModus !== "nytt" && dokVindu && !dokVindu.closed) {
       const g = vinduGeometri();
       try {
         dokVindu.resizeTo(g.w, g.h);
@@ -268,12 +281,21 @@
       const liste = document.createElement("div");
       liste.className = "kol-liste";
       for (const p of kat.prosedyrer) {
-        const btn = document.createElement("button");
-        btn.className = "prosedyre" + (p.url === activeUrl ? " active" : "");
-        btn.textContent = p.navn;
-        btn.title = "Åpne i dokumentvinduet";
-        btn.addEventListener("click", () => velgProsedyre(p));
-        liste.appendChild(btn);
+        // Ekte lenker: høyreklikk gir nettleserens egen meny («Åpne kobling
+        // i nytt vindu» osv.), mens vanlig klikk bruker dokumentvinduet.
+        const lenke = document.createElement("a");
+        lenke.className = "prosedyre" + (p.url === activeUrl ? " active" : "");
+        lenke.href = p.url;
+        lenke.target = "_blank";
+        lenke.rel = "noopener";
+        lenke.textContent = p.navn;
+        lenke.title = "Åpne i dokumentvinduet";
+        lenke.addEventListener("click", (e) => {
+          if (e.ctrlKey || e.metaKey || e.shiftKey) return; // la nettleseren styre
+          e.preventDefault();
+          velgProsedyre(p);
+        });
+        liste.appendChild(lenke);
       }
       kol.appendChild(liste);
       board.appendChild(kol);
@@ -324,8 +346,11 @@
       resultsEl.appendChild(tom);
     } else {
       gjeldendeTreff.forEach((p, i) => {
-        const row = document.createElement("button");
+        const row = document.createElement("a");
         row.className = "result-row" + (i === valgtResultat ? " selected" : "");
+        row.href = p.url;
+        row.target = "_blank";
+        row.rel = "noopener";
         row.setAttribute("role", "option");
         row.innerHTML =
           '<span class="result-navn">' + highlight(p.navn, term) + "</span>" +
@@ -333,7 +358,9 @@
           '<span class="result-kategori">' + escapeHtml(p.kategori) + "</span>" +
           '<span class="gruppe-badge ' + p.gruppe + '">' + GRUPPE_NAVN[p.gruppe] + "</span>" +
           "</span>";
-        row.addEventListener("click", () => {
+        row.addEventListener("click", (e) => {
+          if (e.ctrlKey || e.metaKey || e.shiftKey) return; // la nettleseren styre
+          e.preventDefault();
           velgProsedyre(p);
           lukkSpotlight();
         });
