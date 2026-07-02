@@ -1,0 +1,366 @@
+{
+  "rontgen": [
+    {
+      "kategori": "Caput",
+      "type": "pasient",
+      "pasienttype": "voksen",
+      "prosedyrer": [
+        {
+          "navn": "RG Caput / RG Orbita ved spørsmål om fremmedlegeme",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17197.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Thorax / Abdomen",
+      "type": "pasient",
+      "pasienttype": "voksen",
+      "prosedyrer": [
+        {
+          "navn": "RG Thorax / Cor",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK14399.pdf"
+        },
+        {
+          "navn": "RG Costa",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04179.pdf"
+        },
+        {
+          "navn": "RG Sternum / sternoclavicularledd",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04188.pdf"
+        },
+        {
+          "navn": "RG Abdomen",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK14398.pdf"
+        },
+        {
+          "navn": "Oro-anal transittid (OATT) måling med pellets",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK12435.pdf"
+        },
+        {
+          "navn": "RG Urinveier",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK25005.pdf"
+        },
+        {
+          "navn": "RG Shuntoversikt Caput / Thorax / abdomen",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17262.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Columna",
+      "type": "pasient",
+      "pasienttype": "voksen",
+      "prosedyrer": [
+        {
+          "navn": "RG Cervicalcolumna",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04167.pdf"
+        },
+        {
+          "navn": "RG Thoracalcolumna",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04168.pdf"
+        },
+        {
+          "navn": "RG Lumbosacralcolumna",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04169.pdf"
+        },
+        {
+          "navn": "RG Ileosacralledd",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04176.pdf"
+        },
+        {
+          "navn": "RG Os Sacrum / Os Coccygis",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04177.pdf"
+        },
+        {
+          "navn": "RG Scoliosemåling LAB 4 Moss",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK25941.pdf"
+        },
+        {
+          "navn": "RG Scoliosemåling LAB 3 Moss",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK53606.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Bekken",
+      "type": "pasient",
+      "pasienttype": "voksen",
+      "prosedyrer": [
+        {
+          "navn": "RG Bekken",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04225.pdf"
+        },
+        {
+          "navn": "RG Hofte",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04226.pdf"
+        },
+        {
+          "navn": "RG Aksemåling underekstremiteter LAB 4 Moss",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK48247.pdf"
+        },
+        {
+          "navn": "RG Aksemåling underekstremiteter LAB 3 Moss",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK53607.pdf"
+        },
+        {
+          "navn": "RG Benlengdemåling LAB 4 Moss",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK20356.pdf"
+        },
+        {
+          "navn": "RG Benlengdemåling LAB 3 Moss",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK53605.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Overekstremitet",
+      "type": "pasient",
+      "pasienttype": "voksen",
+      "prosedyrer": [
+        {
+          "navn": "RG Skulder",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04212.pdf"
+        },
+        {
+          "navn": "RG Scapula",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04213.pdf"
+        },
+        {
+          "navn": "RG Clavicula",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04214.pdf"
+        },
+        {
+          "navn": "RG Acromio-clavicularledd",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04215.pdf"
+        },
+        {
+          "navn": "RG Humerus",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04216.pdf"
+        },
+        {
+          "navn": "RG Albue",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04219.pdf"
+        },
+        {
+          "navn": "RG Underarm",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04220.pdf"
+        },
+        {
+          "navn": "RG Håndledd",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04221.pdf"
+        },
+        {
+          "navn": "RG Os scaphoideum",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04222.pdf"
+        },
+        {
+          "navn": "RG Hånd",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04223.pdf"
+        },
+        {
+          "navn": "RG Fingre",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04224.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Underekstremitet",
+      "type": "pasient",
+      "pasienttype": "voksen",
+      "prosedyrer": [
+        {
+          "navn": "RG Femur",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04227.pdf"
+        },
+        {
+          "navn": "RG Kne",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04228.pdf"
+        },
+        {
+          "navn": "RG Legg",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04229.pdf"
+        },
+        {
+          "navn": "RG Ankel",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04230.pdf"
+        },
+        {
+          "navn": "RG Calcaneus",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04231.pdf"
+        },
+        {
+          "navn": "RG Fot / tær",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK04232.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Thorax / Abdomen",
+      "type": "pasient",
+      "pasienttype": "barn",
+      "prosedyrer": [
+        {
+          "navn": "RG Epipharynx barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK14308.pdf"
+        },
+        {
+          "navn": "RG Thorax / Abdomen på nyfødtintensiv (NFI)",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK12260.pdf"
+        },
+        {
+          "navn": "RG Thorax barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK14414.pdf"
+        },
+        {
+          "navn": "RG Abdomen barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK18596.pdf"
+        },
+        {
+          "navn": "RG Tarmpassasje på barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK26576.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Columna",
+      "type": "pasient",
+      "pasienttype": "barn",
+      "prosedyrer": [
+        {
+          "navn": "RG Cervicalcolumna av barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17956.pdf"
+        },
+        {
+          "navn": "RG Thoracalcolumna av barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK49424.pdf"
+        },
+        {
+          "navn": "RG Lumbosacralcolumna av barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK49425.pdf"
+        },
+        {
+          "navn": "RG Os Sacrum / Os Coccygis av barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK49426.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Bekken",
+      "type": "pasient",
+      "pasienttype": "barn",
+      "prosedyrer": [
+        {
+          "navn": "RG Bekken og hofter av barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17958.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Overekstremitet",
+      "type": "pasient",
+      "pasienttype": "barn",
+      "prosedyrer": [
+        {
+          "navn": "RG Skulder av barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17950.pdf"
+        },
+        {
+          "navn": "RG Clavicula av barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17952.pdf"
+        },
+        {
+          "navn": "RG Humerus barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK47990.pdf"
+        },
+        {
+          "navn": "RG Albue av barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17953.pdf"
+        },
+        {
+          "navn": "RG Underarm av barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17977.pdf"
+        },
+        {
+          "navn": "RG Håndledd barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK48348.pdf"
+        },
+        {
+          "navn": "RG Hånd, fingre, skjelettalder av barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17954.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Underekstremitet",
+      "type": "pasient",
+      "pasienttype": "barn",
+      "prosedyrer": [
+        {
+          "navn": "RG Femur barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK47991.pdf"
+        },
+        {
+          "navn": "RG Kne av barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17959.pdf"
+        },
+        {
+          "navn": "RG Legg barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK47992.pdf"
+        },
+        {
+          "navn": "RG Ankel barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17960.pdf"
+        },
+        {
+          "navn": "RG Fot barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK18166.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Spesialundersøkelser",
+      "type": "pasient",
+      "pasienttype": "barn",
+      "prosedyrer": [
+        {
+          "navn": "RG Undersøkelse ved mistanke om barnemishandel / plutselig spedbarnsdød",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK16285.pdf"
+        },
+        {
+          "navn": "RG ved Skjelettdysplasier på barn",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK16286.pdf"
+        },
+        {
+          "navn": "RG Totalskjelett ved dødfødsel/abort",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK17202.pdf"
+        }
+      ]
+    },
+    {
+      "kategori": "Direkte",
+      "type": "administrativ",
+      "prosedyrer": [
+        {
+          "navn": "BoneView - Kunstig intelligens på akutt skjelettrøntgen",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK53175.pdf"
+        },
+        {
+          "navn": "Granskning eller flagging av ortopediske kontrollbilder",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK42987.pdf"
+        },
+        {
+          "navn": "Henging av konvensjonelle røntgenbilder i PACS",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK42983.pdf"
+        },
+        {
+          "navn": "Henvend deg i luken",
+          "url": "https://hsorhf.sharepoint.com/:w:/r/sites/SHF-O-461010BildediagnostikkAkuttKalnes/Shared%20Documents/R%C3%B8ntgen/Henvend%20deg%20i%20luken/A5%20Henvend%20deg%20i%20luken%20A5.docx?d=wb5c751b57ca5449d8e9bcad4dd5145e4&csf=1&web=1&e=ByqejD"
+        },
+        {
+          "navn": "Konstanskontroll",
+          "url": "https://ek-sohf.sikt.sykehuspartner.no/docs/pub/DOK50556.pdf"
+        }
+      ]
+    }
+  ]
+}
