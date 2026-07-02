@@ -43,7 +43,18 @@
     applyTheme(current === "dark" ? "light" : "dark");
   });
 
-  /* ---------- Ikoner per kategori ---------- */
+  /* ---------- Ikoner og bilder per kategori ---------- */
+
+  // Nedskalerte utgaver av bildene i kategorier/ (lages av IT/vedlikeholder;
+  // se README). Kategorier uten bilde faller tilbake til emoji-ikonet.
+  const BILDER = {
+    "Caput": "kategorier/thumbs/Caput.png",
+    "Thorax / Abdomen": "kategorier/thumbs/Thorax Abdomen.png",
+    "Columna": "kategorier/thumbs/Columna.png",
+    "Bekken": "kategorier/thumbs/Bekken.png",
+    "Overekstremitet": "kategorier/thumbs/Overekstremitet.png",
+    "Underekstremitet": "kategorier/thumbs/Underekstremitet.png"
+  };
 
   function iconFor(navn, admin) {
     if (admin) return "📋";
@@ -227,8 +238,12 @@
 
       const head = document.createElement("header");
       head.className = "card-head";
+      const bilde = BILDER[kat.navn];
       head.innerHTML =
-        '<span class="card-icon">' + kat.ikon + "</span>" +
+        (bilde
+          ? '<span class="card-img-wrap"><img class="card-img" src="' +
+            encodeURI(bilde) + '" alt="" loading="lazy"></span>'
+          : '<span class="card-icon">' + kat.ikon + "</span>") +
         '<span class="card-name">' + escapeHtml(kat.navn) + "</span>" +
         '<span class="card-count">' + antall + "</span>";
       card.appendChild(head);
