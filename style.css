@@ -80,12 +80,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 50px;
-  padding: 0 clamp(16px, 2.5vw, 36px);
-  background: var(--surface-frost);
-  -webkit-backdrop-filter: saturate(1.8) blur(20px);
-  backdrop-filter: saturate(1.8) blur(20px);
-  border-bottom: 1px solid var(--hairline);
+  padding: clamp(16px, 2.8vh, 30px) clamp(20px, 3vw, 44px) 0;
+  background: transparent;
   flex-shrink: 0;
   z-index: 40;
 }
@@ -162,8 +158,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(10px, 1.6vh, 16px);
-  padding: clamp(12px, 2.6vh, 26px) 16px clamp(8px, 1.6vh, 16px);
+  gap: clamp(14px, 2.6vh, 26px);
+  padding: clamp(18px, 4.5vh, 52px) 16px clamp(12px, 2.8vh, 30px);
   flex-shrink: 0;
 }
 
@@ -177,19 +173,21 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  height: clamp(42px, 5.4vh, 48px);
+  height: clamp(44px, 5.6vh, 50px);
   padding: 0 14px 0 16px;
   background: var(--surface);
   border: 1px solid var(--hairline);
   border-radius: 14px;
   box-shadow: var(--card-shadow);
-  transition: box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
+  transition: box-shadow 0.3s var(--ease), border-color 0.3s var(--ease),
+    transform 0.3s var(--ease);
 }
 
 .spotlight.open .spotlight-field,
 .spotlight-field:focus-within {
   border-color: transparent;
   box-shadow: var(--pop-shadow);
+  transform: translateY(-1px) scale(1.01);
 }
 
 .search-icon {
@@ -239,6 +237,19 @@ body {
   overflow-y: auto;
   padding: 7px;
   scrollbar-width: thin;
+  transform-origin: top center;
+  animation: popInn 0.28s var(--ease) both;
+}
+
+@keyframes popInn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .result-row {
@@ -255,7 +266,10 @@ body {
   text-align: left;
   text-decoration: none;
   box-sizing: border-box;
+  transition: background 0.12s var(--ease), transform 0.1s var(--ease);
 }
+
+.result-row:active { transform: scale(0.99); }
 
 .result-navn {
   flex: 1;
@@ -367,8 +381,12 @@ mark {
   background: var(--glider);
   border-radius: 9px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), 0 3px 8px rgba(0, 0, 0, 0.06);
-  transition: transform 0.35s var(--ease);
+  /* liten fjæring i pillen, som iOS */
+  transition: transform 0.42s cubic-bezier(0.34, 1.25, 0.4, 1);
 }
+
+.segment:active { transform: scale(0.96); }
+.segment { transition: color 0.25s var(--ease), transform 0.12s var(--ease); }
 
 /* ---------- Tavlen: kolonner per kroppsregion ---------- */
 
@@ -380,15 +398,35 @@ mark {
   width: 100%;
   max-width: 1860px;
   margin: 0 auto;
-  padding: clamp(6px, 1vh, 10px) clamp(14px, 2.2vw, 36px) clamp(14px, 2.4vh, 26px);
+  padding: clamp(8px, 1.8vh, 20px) clamp(14px, 2.2vw, 36px) clamp(14px, 2.6vh, 30px);
+  --ut-x: 0px;
+  --inn-x: 0px;
+  --inn-y: 14px;
   opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
+  transform: translateX(0);
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
 }
 
-.board.skifter {
+/* Utgang ved gruppebytte: glir svakt i pillens retning mens det tones ut */
+.board.ut {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateX(var(--ut-x));
+}
+
+/* Inngang: kolonnene kaskaderer inn fra motsatt side (eller stiger ved last) */
+.kol-inn {
+  animation: kolInn 0.55s var(--ease) both;
+}
+
+@keyframes kolInn {
+  from {
+    opacity: 0;
+    transform: translate(var(--inn-x), var(--inn-y));
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
 }
 
 .kolonne {
@@ -402,6 +440,7 @@ mark {
   border-radius: var(--radius);
   box-shadow: var(--card-shadow);
   overflow: hidden;
+  transition: background 0.3s var(--ease), box-shadow 0.3s var(--ease);
 }
 
 /* «Annet» har én kolonne – la den stå rolig i midten */
@@ -484,7 +523,14 @@ mark {
   text-decoration: none;
   box-sizing: border-box;
   cursor: pointer;
-  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+  transition: background 0.15s var(--ease), color 0.15s var(--ease),
+    transform 0.1s var(--ease);
+}
+
+/* Trykk-respons: raden gir svakt etter under fingeren */
+.prosedyre:active {
+  transform: scale(0.98);
+  background: var(--accent-soft);
 }
 
 .prosedyre::after {

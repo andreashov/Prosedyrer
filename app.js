@@ -142,9 +142,9 @@
      nettleservindu med faner – det valget er forbeholdt brukeren selv.
      Shift+klikk og høyreklikk → «Åpne kobling i nytt vindu» gjør det,
      og fungerer på alle prosedyrene siden de er ekte lenker. */
-  const VINDU_MODI = ["full", "hoyre", "fane"];
-  let vinduModus = localStorage.getItem("vinduModus3") || "full";
-  if (VINDU_MODI.indexOf(vinduModus) === -1) vinduModus = "full";
+  const VINDU_MODI = ["fane", "full", "hoyre"];
+  let vinduModus = localStorage.getItem("vinduModus4") || "fane";
+  if (VINDU_MODI.indexOf(vinduModus) === -1) vinduModus = "fane";
   let dokVindu = null;
 
   function vinduGeometri() {
@@ -177,11 +177,11 @@
   }
 
   const VINDU_TITLER = {
+    fane: "Dokumenter åpnes i ny fane – klikk for gjenbrukt vindu i hele skjermen. " +
+      "Tips: Shift+klikk på en prosedyre gir ekte nytt nettleservindu.",
     full: "Dokumenter åpnes i ett gjenbrukt vindu i hele skjermen – klikk for høyre halvdel. " +
       "Tips: Shift+klikk på en prosedyre gir ekte nytt nettleservindu.",
     hoyre: "Dokumenter åpnes i ett gjenbrukt vindu i høyre halvdel – klikk for ny fane. " +
-      "Tips: Shift+klikk på en prosedyre gir ekte nytt nettleservindu.",
-    fane: "Dokumenter åpnes i ny fane – klikk for gjenbrukt vindu i hele skjermen. " +
       "Tips: Shift+klikk på en prosedyre gir ekte nytt nettleservindu."
   };
 
@@ -194,7 +194,7 @@
 
   vinduToggle.addEventListener("click", () => {
     vinduModus = VINDU_MODI[(VINDU_MODI.indexOf(vinduModus) + 1) % VINDU_MODI.length];
-    localStorage.setItem("vinduModus3", vinduModus);
+    localStorage.setItem("vinduModus4", vinduModus);
     oppdaterVinduToggle();
     // Er popup-vinduet åpent, endres størrelsen med en gang
     if (vinduModus !== "fane" && dokVindu && !dokVindu.closed) {
@@ -217,31 +217,43 @@
     }
     activeUrl = p.url;
     apneDokumentvindu(p.url);
-    renderBoard();
+    oppdaterAktiv(); // marker uten å tegne tavlen på nytt (unngår animasjonsreprise)
+  }
+
+  function oppdaterAktiv() {
+    for (const a of board.querySelectorAll(".prosedyre")) {
+      a.classList.toggle("active", a.href === activeUrl);
+    }
   }
 
   /* ---------- Glidebryteren ---------- */
 
+  const GRUPPE_REKKEFOLGE = ["voksen", "barn", "annet"];
+
   function setGruppe(g, hopp) {
+    const forrigeIdx = GRUPPE_REKKEFOLGE.indexOf(gruppe);
+    const nyIdx = GRUPPE_REKKEFOLGE.indexOf(g);
+    const retning = nyIdx >= forrigeIdx ? 1 : -1;
     gruppe = g;
     localStorage.setItem("gruppe", g);
-    const idx = ["voksen", "barn", "annet"].indexOf(g);
-    glider.style.transform = "translateX(" + idx * 100 + "%)";
+    glider.style.transform = "translateX(" + nyIdx * 100 + "%)";
     for (const s of segments) {
       const aktiv = s.dataset.gruppe === g;
       s.classList.toggle("active", aktiv);
       s.setAttribute("aria-selected", String(aktiv));
     }
     if (hopp) {
-      renderBoard();
+      renderBoard({ x: 0, y: 14 }); // første visning: kolonnene stiger inn
       return;
     }
-    // Myk krysstoning ved bytte
-    board.classList.add("skifter");
+    // Retningsbevisst bytte: innholdet glir ut den ene veien og kaskaderer
+    // inn fra motsatt side, i takt med pillen i skyvebryteren.
+    board.classList.add("ut");
+    board.style.setProperty("--ut-x", -retning * 16 + "px");
     setTimeout(() => {
-      renderBoard();
-      board.classList.remove("skifter");
-    }, 160);
+      board.classList.remove("ut");
+      renderBoard({ x: retning * 26, y: 0 });
+    }, 150);
   }
 
   for (const s of segments) {
@@ -258,14 +270,20 @@
     })[c]);
   }
 
-  function renderBoard() {
+  function renderBoard(inngang) {
     board.innerHTML = "";
     const kategorier = GRUPPER[gruppe];
     board.classList.toggle("enkel", kategorier.length === 1);
+    if (inngang) {
+      board.style.setProperty("--inn-x", inngang.x + "px");
+      board.style.setProperty("--inn-y", inngang.y + "px");
+    }
 
+    let i = 0;
     for (const kat of kategorier) {
       const kol = document.createElement("section");
-      kol.className = "kolonne";
+      kol.className = "kolonne" + (inngang ? " kol-inn" : "");
+      if (inngang) kol.style.animationDelay = i++ * 45 + "ms";
 
       const head = document.createElement("div");
       head.className = "kol-head";
