@@ -20,8 +20,10 @@
   --dim: #6e6e73;
   --faint: #86868b;
   --hairline: rgba(0, 0, 0, 0.08);
-  --accent: #0071e3;
-  --accent-soft: rgba(0, 113, 227, 0.09);
+  /* aksentfargen er hentet fra logoen (#c700af), mørknet noe for lesbarhet */
+  --accent: #b4009b;
+  --accent-soft: rgba(199, 0, 175, 0.08);
+  --accent-sel: #b4009b;
 
   --barn-farge: #bf4800;
   --barn-soft: rgba(245, 99, 0, 0.10);
@@ -47,8 +49,9 @@
   --dim: #a1a1a6;
   --faint: #7c7c81;
   --hairline: rgba(255, 255, 255, 0.12);
-  --accent: #2997ff;
-  --accent-soft: rgba(41, 151, 255, 0.16);
+  --accent: #f36ade;
+  --accent-soft: rgba(243, 106, 222, 0.15);
+  --accent-sel: #a81090;
 
   --barn-farge: #ffa056;
   --barn-soft: rgba(255, 145, 60, 0.16);
@@ -78,6 +81,33 @@ body {
   transition: background 0.3s var(--ease);
 }
 
+/* Dybde i bakgrunnen: lysest øverst bak logoen, med et snev av logoens
+   farge, gradvis mørkere nedover. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 420px at 50% -80px,
+      color-mix(in srgb, var(--accent) 5%, transparent), transparent 72%),
+    linear-gradient(180deg,
+      color-mix(in srgb, #ffffff 55%, var(--bg)) 0%,
+      var(--bg) 38%,
+      color-mix(in srgb, #000000 4%, var(--bg)) 100%);
+}
+
+[data-theme="dark"] body::before {
+  background:
+    radial-gradient(900px 420px at 50% -80px,
+      color-mix(in srgb, var(--accent) 7%, transparent), transparent 72%),
+    linear-gradient(180deg,
+      color-mix(in srgb, #ffffff 3.5%, var(--bg)) 0%,
+      var(--bg) 38%,
+      color-mix(in srgb, #000000 30%, var(--bg)) 100%);
+}
+
 /* Alt skal få plass på én PC-skjerm uten scrolling */
 @media (min-width: 1024px) and (min-height: 620px) {
   body { overflow: hidden; }
@@ -99,6 +129,22 @@ body {
 .logo {
   height: clamp(44px, 7vh, 72px);
   width: auto;
+  position: relative;
+}
+
+/* Svak glød bak logoen i sidens aksentfarge */
+.topbar::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -30%;
+  transform: translateX(-50%);
+  width: 360px;
+  height: 190%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side,
+    color-mix(in srgb, var(--accent) 9%, transparent), transparent);
+  pointer-events: none;
 }
 
 /* Mørk modus: sorte partier i logoen blir hvite, rosafargen bevares omtrent */
@@ -381,7 +427,7 @@ body {
 
 .result-row:hover { background: var(--seg-track); }
 
-.result-row.selected { background: var(--accent); }
+.result-row.selected { background: var(--accent-sel); }
 .result-row.selected .result-navn,
 .result-row.selected .result-kategori { color: #fff; }
 .result-row.selected .result-navn mark { color: #fff; }
