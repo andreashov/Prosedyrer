@@ -24,6 +24,50 @@ jobs:
       - name: Hent kildekode
         uses: actions/checkout@v4
 
+      - name: Valider prosedyrelisten
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+
+          def feil(melding):
+              print(f"::error file=prosedyrer_rontgen.json::{melding}")
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as s:
+                  s.write("## ❌ Publisering stoppet\n\n")
+                  s.write(f"**Feil i `prosedyrer_rontgen.json`:** {melding}\n\n")
+                  s.write("Forrige versjon av siden blir stående. Rett filen og "
+                          "commit på nytt, så publiseres siden automatisk.\n")
+              sys.exit(1)
+
+          try:
+              data = json.load(open("prosedyrer_rontgen.json", encoding="utf-8"))
+          except json.JSONDecodeError as e:
+              feil(f"Ugyldig JSON (typisk manglende komma eller anførselstegn): "
+                   f"linje {e.lineno}, kolonne {e.colno} – {e.msg}")
+
+          if not isinstance(data.get("rontgen"), list) or not data["rontgen"]:
+              feil("Toppnivået må ha en ikke-tom liste som heter 'rontgen'.")
+
+          for i, k in enumerate(data["rontgen"], 1):
+              hvor = f"oppføring {i} ('{k.get('kategori', '?')}')"
+              if not k.get("kategori"):
+                  feil(f"{hvor} mangler 'kategori'.")
+              if not isinstance(k.get("prosedyrer"), list) or not k["prosedyrer"]:
+                  feil(f"{hvor} mangler en ikke-tom 'prosedyrer'-liste.")
+              if k.get("type") != "administrativ" and k.get("pasienttype") not in ("voksen", "barn"):
+                  feil(f"{hvor} må ha pasienttype 'voksen' eller 'barn' "
+                       f"(eller type 'administrativ').")
+              for j, p in enumerate(k["prosedyrer"], 1):
+                  if not p.get("navn") or not p.get("url"):
+                      feil(f"{hvor}, prosedyre {j}: mangler 'navn' eller 'url'.")
+                  if not str(p["url"]).startswith("http"):
+                      feil(f"{hvor}, prosedyre {j} ('{p['navn']}'): "
+                           f"url ser ikke ut som en lenke.")
+
+          antall = sum(len(k["prosedyrer"]) for k in data["rontgen"])
+          print(f"prosedyrer_rontgen.json er gyldig: "
+                f"{len(data['rontgen'])} kategorier, {antall} prosedyrer.")
+          PY
+
       - name: Konfigurer Pages
         uses: actions/configure-pages@v5
         with:

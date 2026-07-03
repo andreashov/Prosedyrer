@@ -216,6 +216,15 @@
 
   oppdaterVinduToggle();
 
+  // Nylig åpnede prosedyrer (vises i Spotlight når søkefeltet er tomt)
+  let nylige = [];
+  try { nylige = JSON.parse(localStorage.getItem("nylige") || "[]"); } catch (e) { nylige = []; }
+
+  function huskNylig(p) {
+    nylige = [p.url].concat(nylige.filter((u) => u !== p.url)).slice(0, 6);
+    localStorage.setItem("nylige", JSON.stringify(nylige));
+  }
+
   function velgProsedyre(p) {
     if (nettStatus === "frakoblet") {
       // Vis varselet igjen selv om det er lukket – klikket trenger et svar
@@ -226,6 +235,7 @@
       return;
     }
     activeUrl = p.url;
+    huskNylig(p);
     apneDokumentvindu(p.url);
     oppdaterAktiv(); // marker uten å tegne tavlen på nytt (unngår animasjonsreprise)
   }
@@ -324,12 +334,33 @@
         lenke.target = "_blank";
         lenke.rel = "noopener";
         lenke.textContent = p.navn;
-        lenke.title = "Åpne i dokumentvinduet";
         lenke.addEventListener("click", (e) => {
           if (e.ctrlKey || e.metaKey || e.shiftKey) return; // la nettleseren styre
           e.preventDefault();
           velgProsedyre(p);
         });
+
+        // Diskret kopier lenke-knapp, synlig når pekeren er over raden
+        const kopier = document.createElement("span");
+        kopier.className = "kopier";
+        kopier.setAttribute("role", "button");
+        kopier.title = "Kopier lenke til dokumentet";
+        kopier.innerHTML =
+          '<svg class="ik-lenke" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M10 13.5a5 5 0 0 0 7.55.55l2.9-2.9a5 5 0 0 0-7.07-7.07l-1.66 1.65"></path>' +
+          '<path d="M14 10.5a5 5 0 0 0-7.55-.55l-2.9 2.9a5 5 0 0 0 7.07 7.07l1.65-1.65"></path></svg>' +
+          '<svg class="ik-hake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+          '<polyline points="4.5 12.5 9.5 17.5 19.5 6.5"></polyline></svg>';
+        kopier.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          navigator.clipboard.writeText(p.url).then(() => {
+            kopier.classList.add("kopiert");
+            setTimeout(() => kopier.classList.remove("kopiert"), 1400);
+          }).catch(() => {});
+        });
+        lenke.appendChild(kopier);
+
         liste.appendChild(lenke);
       }
       kol.appendChild(liste);
@@ -457,10 +488,59 @@
 
   let gjeldendeTreff = [];
 
+  function lagResultatRad(p, i, term) {
+    const row = document.createElement("a");
+    row.className = "result-row" + (i === valgtResultat ? " selected" : "");
+    row.href = p.url;
+    row.target = "_blank";
+    row.rel = "noopener";
+    row.setAttribute("role", "option");
+    row.innerHTML =
+      '<span class="result-navn">' + (term ? highlight(p.navn, term) : escapeHtml(p.navn)) + "</span>" +
+      '<span class="result-meta">' +
+      '<span class="result-kategori">' + escapeHtml(p.kategori) + "</span>" +
+      '<span class="gruppe-badge ' + p.gruppe + '">' + GRUPPE_NAVN[p.gruppe] + "</span>" +
+      "</span>";
+    row.addEventListener("click", (e) => {
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return; // la nettleseren styre
+      e.preventDefault();
+      velgProsedyre(p);
+      lukkSpotlight();
+    });
+    return row;
+  }
+
+  function apneSpotlight() {
+    spotlight.classList.add("open");
+    resultsEl.classList.remove("hidden");
+    backdrop.classList.remove("hidden");
+  }
+
+  // Tomt felt: vis de sist åpnede prosedyrene, som macOS-Spotlight
+  function visNylige() {
+    const liste = nylige
+      .map((url) => ALLE.find((p) => p.url === url))
+      .filter(Boolean);
+    if (liste.length === 0) {
+      lukkSpotlight();
+      return;
+    }
+    gjeldendeTreff = liste;
+    valgtResultat = 0;
+    resultsEl.innerHTML = "";
+    const label = document.createElement("div");
+    label.className = "result-label";
+    label.textContent = "Nylig åpnet";
+    resultsEl.appendChild(label);
+    liste.forEach((p, i) => resultsEl.appendChild(lagResultatRad(p, i, "")));
+    apneSpotlight();
+  }
+
   function oppdaterSpotlight() {
     const term = searchInput.value.trim();
     if (!term) {
-      lukkSpotlight();
+      if (document.activeElement === searchInput) visNylige();
+      else lukkSpotlight();
       return;
     }
 
@@ -474,32 +554,10 @@
       tom.textContent = "Ingen prosedyrer samsvarer med «" + term + "»";
       resultsEl.appendChild(tom);
     } else {
-      gjeldendeTreff.forEach((p, i) => {
-        const row = document.createElement("a");
-        row.className = "result-row" + (i === valgtResultat ? " selected" : "");
-        row.href = p.url;
-        row.target = "_blank";
-        row.rel = "noopener";
-        row.setAttribute("role", "option");
-        row.innerHTML =
-          '<span class="result-navn">' + highlight(p.navn, term) + "</span>" +
-          '<span class="result-meta">' +
-          '<span class="result-kategori">' + escapeHtml(p.kategori) + "</span>" +
-          '<span class="gruppe-badge ' + p.gruppe + '">' + GRUPPE_NAVN[p.gruppe] + "</span>" +
-          "</span>";
-        row.addEventListener("click", (e) => {
-          if (e.ctrlKey || e.metaKey || e.shiftKey) return; // la nettleseren styre
-          e.preventDefault();
-          velgProsedyre(p);
-          lukkSpotlight();
-        });
-        resultsEl.appendChild(row);
-      });
+      gjeldendeTreff.forEach((p, i) => resultsEl.appendChild(lagResultatRad(p, i, term)));
     }
 
-    spotlight.classList.add("open");
-    resultsEl.classList.remove("hidden");
-    backdrop.classList.remove("hidden");
+    apneSpotlight();
   }
 
   function lukkSpotlight() {
@@ -518,6 +576,7 @@
   }
 
   searchInput.addEventListener("input", oppdaterSpotlight);
+  searchInput.addEventListener("focus", oppdaterSpotlight);
 
   searchInput.addEventListener("keydown", (e) => {
     if (e.key === "ArrowDown") { e.preventDefault(); flyttValg(1); }
@@ -539,10 +598,16 @@
     lukkSpotlight();
   });
 
-  // Begynn å skrive hvor som helst – søkefeltet fanger det, som Spotlight
+  // Tastatur: 1/2/3 bytter gruppe; å skrive noe annet fanges av søkefeltet
+  const SNARVEI_GRUPPE = { "1": "voksen", "2": "barn", "3": "annet" };
+
   document.addEventListener("keydown", (e) => {
     if (e.target === searchInput) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (SNARVEI_GRUPPE[e.key]) {
+      if (SNARVEI_GRUPPE[e.key] !== gruppe) setGruppe(SNARVEI_GRUPPE[e.key]);
+      return;
+    }
     const skrivbart = e.key.length === 1 && e.key !== " ";
     if (skrivbart || e.key === "/") {
       if (e.key === "/") e.preventDefault();

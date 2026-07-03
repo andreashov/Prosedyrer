@@ -440,6 +440,15 @@ body::before {
   color: var(--faint);
 }
 
+.result-label {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+}
+
 mark {
   background: none;
   color: inherit;
@@ -664,24 +673,45 @@ mark {
   background: var(--accent-soft);
 }
 
-.prosedyre::after {
-  content: "↗";
-  position: absolute;
-  right: 9px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 11px;
-  color: var(--accent);
-  opacity: 0;
-  transition: opacity 0.15s var(--ease);
-}
-
 .prosedyre:hover {
   background: var(--accent-soft);
   color: var(--text);
 }
 
-.prosedyre:hover::after { opacity: 1; }
+/* Kopier lenke-knappen: usynlig til raden får peker, aldri i veien */
+.kopier {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  color: var(--faint);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.15s var(--ease), background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+
+.prosedyre:hover .kopier { opacity: 1; }
+
+.kopier:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.kopier svg { width: 13px; height: 13px; }
+.kopier .ik-hake { display: none; }
+.kopier.kopiert .ik-lenke { display: none; }
+.kopier.kopiert .ik-hake { display: block; }
+.kopier.kopiert {
+  opacity: 1;
+  color: #1da35c;
+  background: rgba(29, 163, 92, 0.12);
+}
 
 .prosedyre.active {
   color: var(--accent);
