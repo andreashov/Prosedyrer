@@ -1,7 +1,7 @@
 /* Service worker: gjør siden installerbar og raskt tilgjengelig.
    Strategi: nett først (alt er alltid ferskt når man er på nett),
    med hurtiglager som reserve slik at selve siden åpner uten nett. */
-const CACHE = "prosedyrer-v1";
+const CACHE = "prosedyrer-v2";
 const SKALL = [
   "./",
   "index.html",

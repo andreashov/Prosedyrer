@@ -263,17 +263,49 @@
       s.setAttribute("aria-selected", String(aktiv));
     }
     if (hopp) {
-      renderBoard({ x: 0, y: 14 }); // første visning: kolonnene stiger inn
+      renderBoard({ x: 0, y: 14, base: 280 }); // åpningen: kortene kaskaderer sist
       return;
     }
-    // Retningsbevisst bytte: innholdet glir ut den ene veien og kaskaderer
-    // inn fra motsatt side, i takt med pillen i skyvebryteren.
-    board.classList.add("ut");
-    board.style.setProperty("--ut-x", -retning * 16 + "px");
-    setTimeout(() => {
-      board.classList.remove("ut");
-      renderBoard({ x: retning * 26, y: 0 });
-    }, 150);
+
+    /* Morf (FLIP): kategorier som finnes i begge grupper glir og skalerer
+       smidig til sin nye posisjon og størrelse; nye kategorier stiger inn
+       fra pillens retning, i takt med bryteren. */
+    const gamle = new Map();
+    for (const el of board.querySelectorAll(".kolonne")) {
+      gamle.set(el.dataset.navn, el.getBoundingClientRect());
+    }
+
+    renderBoard(null);
+
+    const nye = board.querySelectorAll(".kolonne");
+    let nyIndeks = 0;
+    for (const el of nye) {
+      const forrige = gamle.get(el.dataset.navn);
+      if (forrige) {
+        const rect = el.getBoundingClientRect();
+        const dx = forrige.left - rect.left;
+        const dy = forrige.top - rect.top;
+        const sx = forrige.width / rect.width;
+        const sy = forrige.height / rect.height;
+        el.style.transformOrigin = "top left";
+        el.style.transition = "none";
+        el.style.transform =
+          "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")";
+        void el.offsetWidth;
+        el.style.transition = "transform 0.5s " + "cubic-bezier(0.32, 0.72, 0, 1)";
+        el.style.transform = "";
+        el.addEventListener("transitionend", function rydd() {
+          el.style.transition = "";
+          el.style.transformOrigin = "";
+          el.removeEventListener("transitionend", rydd);
+        });
+      } else {
+        el.style.setProperty("--inn-x", retning * 26 + "px");
+        el.style.setProperty("--inn-y", "0px");
+        el.style.animationDelay = 100 + nyIndeks++ * 50 + "ms";
+        el.classList.add("kol-inn");
+      }
+    }
   }
 
   for (const s of segments) {
@@ -290,6 +322,19 @@
     })[c]);
   }
 
+  // Teller antallet mykt opp fra 0 – et lite livstegn ved lasting
+  function tellOpp(el, mål, suffiks) {
+    const start = performance.now();
+    const varighet = 500;
+    function steg(nå) {
+      const t = Math.min(1, (nå - start) / varighet);
+      const verdi = Math.round(mål * (1 - Math.pow(1 - t, 3)));
+      el.textContent = verdi + suffiks;
+      if (t < 1) requestAnimationFrame(steg);
+    }
+    requestAnimationFrame(steg);
+  }
+
   function renderBoard(inngang) {
     board.innerHTML = "";
     const kategorier = GRUPPER[gruppe];
@@ -301,13 +346,18 @@
 
     let i = 0;
     for (const kat of kategorier) {
+      const n = kat.prosedyrer.length;
       const kol = document.createElement("section");
       kol.className = "kolonne" + (inngang ? " kol-inn" : "");
-      if (inngang) kol.style.animationDelay = i++ * 45 + "ms";
+      kol.dataset.navn = kat.navn;
+      // Bento: bredden vokser med innholdsmengden
+      kol.style.flexGrow = Math.max(1, Math.sqrt(n)).toFixed(2);
+      if (inngang) kol.style.animationDelay = (inngang.base || 0) + i++ * 45 + "ms";
 
       const head = document.createElement("div");
       head.className = "kol-head";
       const bilde = BILDER[kat.navn];
+      const suffiks = n === 1 ? " prosedyre" : " prosedyrer";
       head.innerHTML =
         '<div class="kol-bilde">' +
         (bilde
@@ -315,16 +365,16 @@
           : '<span class="kol-emoji">' + iconFor(kat.navn, kat.admin) + "</span>") +
         "</div>" +
         '<div class="kol-navn">' + escapeHtml(kat.navn) + "</div>" +
-        '<div class="kol-antall">' + kat.prosedyrer.length +
-        (kat.prosedyrer.length === 1 ? " prosedyre" : " prosedyrer") + "</div>";
+        '<div class="kol-antall">' + n + suffiks + "</div>";
       kol.appendChild(head);
+      if (inngang) tellOpp(head.querySelector(".kol-antall"), n, suffiks);
 
       const strek = document.createElement("div");
       strek.className = "kol-strek";
       kol.appendChild(strek);
 
       const liste = document.createElement("div");
-      liste.className = "kol-liste";
+      liste.className = "kol-liste" + (n >= 8 ? " to-spalter" : "");
       for (const p of kat.prosedyrer) {
         // Ekte lenker: høyreklikk gir nettleserens egen meny («Åpne kobling
         // i nytt vindu» osv.), mens vanlig klikk bruker dokumentvinduet.
@@ -614,6 +664,64 @@
       searchInput.focus();
     }
   });
+
+  /* ---------- Ambient bevegelse ---------- */
+
+  // Bento-kortene lener seg svakt mot pekeren (parallax)
+  let vippet = null;
+
+  board.addEventListener("mousemove", (e) => {
+    const kol = e.target.closest(".kolonne");
+    if (vippet && vippet !== kol) {
+      vippet.style.transform = "";
+      vippet = null;
+    }
+    if (!kol || kol.style.transition) return; // ikke under FLIP-morfen
+    const r = kol.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    kol.style.transform =
+      "perspective(1100px) rotateX(" + (-py * 1.5).toFixed(2) + "deg) rotateY(" +
+      (px * 1.5).toFixed(2) + "deg) translateY(-2px)";
+    vippet = kol;
+  });
+
+  board.addEventListener("mouseleave", () => {
+    if (vippet) {
+      vippet.style.transform = "";
+      vippet = null;
+    }
+  });
+
+  // Lysglimtet på glasselementene følger pekeren
+  for (const glass of document.querySelectorAll(".spotlight-field, .segmented")) {
+    glass.addEventListener("mousemove", (e) => {
+      const r = glass.getBoundingClientRect();
+      glass.style.setProperty("--mx", (e.clientX - r.left) + "px");
+      glass.style.setProperty("--my", (e.clientY - r.top) + "px");
+    });
+  }
+
+  // Plassholderen hvisker frem søkets muligheter når feltet står urørt
+  const HINT = [
+    "Søk i alle prosedyrer",
+    "Prøv «kne barn»",
+    "Prøv «scapoid»",
+    "Prøv «lunge»",
+    "Prøv «ryggen»"
+  ];
+  let hintIdx = 0;
+  const spotlightField = document.querySelector(".spotlight-field");
+
+  setInterval(() => {
+    if (document.activeElement === searchInput || searchInput.value) return;
+    hintIdx = (hintIdx + 1) % HINT.length;
+    spotlightField.classList.add("hint-bytte");
+    setTimeout(() => {
+      searchInput.placeholder = HINT[hintIdx];
+      spotlightField.classList.remove("hint-bytte");
+    }, 350);
+  }, 4200);
 
   /* ---------- Installerbar app ---------- */
 
