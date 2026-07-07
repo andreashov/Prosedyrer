@@ -68,6 +68,11 @@ jobs:
                 f"{len(data['rontgen'])} kategorier, {antall} prosedyrer.")
           PY
 
+      - name: Stemple versjon på filreferansene (hindrer utdatert cache)
+        run: |
+          sed -i "s/DEPLOY_ID/${GITHUB_SHA}/g" index.html
+          echo "Stemplet index.html med versjon ${GITHUB_SHA}"
+
       - name: Konfigurer Pages
         uses: actions/configure-pages@v5
         with:
