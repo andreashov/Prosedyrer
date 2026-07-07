@@ -596,14 +596,17 @@ mark {
 /* Bento-mosaikk på PC-skjermer: 12 kolonner × 6 rader som fyller flaten
    eksakt. Hver flis får spenn (bredde × høyde) etter innholdet sitt,
    satt i JS. «Annet» (én flis) beholder den sentrerte flex-layouten. */
-@media (min-width: 1180px) and (min-height: 680px) {
+@media (min-width: 1024px) and (min-height: 560px) {
   .board:not(.enkel) {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    grid-template-rows: repeat(6, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
     grid-auto-flow: dense;
     flex: 1 1 auto;
   }
+  /* når ett kort er åpent: tre rader, og det aktive spenner 2×2 øverst */
+  .board.har-aktiv:not(.enkel) { grid-template-rows: repeat(3, 1fr); }
+  .kolonne.aktiv { grid-column: 1 / 3; grid-row: 1 / 3; }
 }
 
 
@@ -656,13 +659,73 @@ mark {
 .board.enkel { justify-content: center; align-items: center; flex: 1 1 auto; }
 .board.enkel .kolonne { flex: 0 1 560px; }
 
-/* Kompakt, venstrestilt flisoverskrift – frigjør høyde til innholdet */
+/* Overskriften er en klikkbar knapp; kompakt venstrestilt når et kort er åpent */
 .kol-head {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
   padding: clamp(11px, 1.8vh, 16px) clamp(12px, 1vw, 18px) clamp(9px, 1.4vh, 13px);
   flex-shrink: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Galleri (ingen kort åpent): store, rolige kort med sentrert bilde + navn */
+.board:not(.har-aktiv) .kol-head {
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(10px, 1.8vh, 20px);
+  height: 100%;
+  padding: clamp(16px, 3vh, 34px);
+  text-align: center;
+}
+
+.board:not(.har-aktiv) .kol-bilde {
+  width: clamp(58px, 8.5vh, 108px);
+  height: clamp(58px, 8.5vh, 108px);
+}
+
+.board:not(.har-aktiv) .kol-tekst { align-items: center; }
+.board:not(.har-aktiv) .kol-navn { font-size: clamp(15px, 0.7vw + 8px, 20px); }
+.board:not(.har-aktiv) .kol-antall { font-size: clamp(11.5px, 0.4vw + 6px, 13px); }
+
+/* Små kort når ett er åpent: sentrer overskriften i kortet */
+.board.har-aktiv .kolonne:not(.aktiv) .kol-head {
+  height: 100%;
+  padding: clamp(12px, 1.6vh, 18px) clamp(14px, 1.1vw, 20px);
+}
+
+/* Lukkeknapp på det åpne kortet */
+.kol-lukk {
+  margin-left: auto;
+  align-self: flex-start;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--faint);
+  transition: color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.kol-head:hover .kol-lukk { color: var(--dim); }
+.kol-lukk:hover { color: var(--text); background: var(--seg-track); }
+.kol-lukk svg { width: 13px; height: 13px; }
+
+/* Innholdet i det åpne kortet toner mykt inn etter morfen */
+.kolonne.aktiv .kol-strek,
+.kolonne.aktiv .kol-liste {
+  animation: listeInn 0.4s var(--ease) 0.14s both;
+}
+
+@keyframes listeInn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 
 .kol-bilde {

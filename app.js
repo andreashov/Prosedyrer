@@ -249,63 +249,29 @@
   /* ---------- Glidebryteren ---------- */
 
   const GRUPPE_REKKEFOLGE = ["voksen", "barn", "annet"];
+  let aktivKat = null; // navnet på utvidet kort, null = galleri (bare overskrifter)
 
-  function setGruppe(g, hopp) {
-    const forrigeIdx = GRUPPE_REKKEFOLGE.indexOf(gruppe);
-    const nyIdx = GRUPPE_REKKEFOLGE.indexOf(g);
-    const retning = nyIdx >= forrigeIdx ? 1 : -1;
-    gruppe = g;
-    localStorage.setItem("gruppe", g);
-    glider.style.transform = "translateX(" + nyIdx * 100 + "%)";
-    for (const s of segments) {
-      const aktiv = s.dataset.gruppe === g;
-      s.classList.toggle("active", aktiv);
-      s.setAttribute("aria-selected", String(aktiv));
-    }
-    if (hopp) {
-      renderBoard({ x: 0, y: 14, base: 280 }); // åpningen: kortene kaskaderer sist
-      return;
-    }
-
-    /* Morf (FLIP): kategorier som finnes i begge grupper glir og skalerer
-       smidig til sin nye posisjon og størrelse; nye kategorier stiger inn
-       fra pillens retning, i takt med bryteren. */
+  /* Generisk FLIP-morf: mål gamle kortposisjoner, bygg om tavlen, og la hvert
+     kort gli/skalere smidig fra der det var til der det havnet. Brukes både
+     når man utvider/lukker et kort og når man bytter gruppe. */
+  function morfLayout(byggOm, retning) {
     const gamle = new Map();
     for (const el of board.querySelectorAll(".kolonne")) {
       gamle.set(el.dataset.navn, el.getBoundingClientRect());
     }
-
-    // Ingen felles kategorier (inn/ut av «Annet»): morf ut, så inn
-    const nyeNavn = new Set(GRUPPER[g].map((k) => k.navn));
-    const harFelles = Array.from(gamle.keys()).some((navn) => nyeNavn.has(navn));
-    if (!harFelles) {
-      for (const el of board.querySelectorAll(".kolonne")) {
-        el.style.transition = "transform 0.18s ease-in, opacity 0.18s ease-in";
-        el.style.transform = "translateX(" + -retning * 22 + "px) scale(0.96)";
-        el.style.opacity = "0";
-      }
-      setTimeout(() => renderBoard({ x: retning * 26, y: 0, base: 30 }), 170);
-      return;
-    }
-
-    renderBoard(null);
-
-    const nye = board.querySelectorAll(".kolonne");
+    byggOm();
     let nyIndeks = 0;
-    for (const el of nye) {
-      const forrige = gamle.get(el.dataset.navn);
-      if (forrige) {
-        const rect = el.getBoundingClientRect();
-        const dx = forrige.left - rect.left;
-        const dy = forrige.top - rect.top;
-        const sx = forrige.width / rect.width;
-        const sy = forrige.height / rect.height;
+    for (const el of board.querySelectorAll(".kolonne")) {
+      const f = gamle.get(el.dataset.navn);
+      if (f) {
+        const r = el.getBoundingClientRect();
         el.style.transformOrigin = "top left";
         el.style.transition = "none";
         el.style.transform =
-          "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")";
+          "translate(" + (f.left - r.left) + "px," + (f.top - r.top) + "px) scale(" +
+          (f.width / r.width) + "," + (f.height / r.height) + ")";
         void el.offsetWidth;
-        el.style.transition = "transform 0.5s " + "cubic-bezier(0.32, 0.72, 0, 1)";
+        el.style.transition = "transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)";
         el.style.transform = "";
         el.addEventListener("transitionend", function rydd() {
           el.style.transition = "";
@@ -313,12 +279,44 @@
           el.removeEventListener("transitionend", rydd);
         });
       } else {
-        el.style.setProperty("--inn-x", retning * 26 + "px");
+        el.style.setProperty("--inn-x", (retning || 1) * 26 + "px");
         el.style.setProperty("--inn-y", "0px");
-        el.style.animationDelay = 100 + nyIndeks++ * 50 + "ms";
+        el.style.animationDelay = 80 + nyIndeks++ * 45 + "ms";
         el.classList.add("kol-inn");
       }
     }
+  }
+
+  function setGruppe(g, forstegang) {
+    const retning =
+      GRUPPE_REKKEFOLGE.indexOf(g) >= GRUPPE_REKKEFOLGE.indexOf(gruppe) ? 1 : -1;
+    gruppe = g;
+    aktivKat = null; // lukk et eventuelt utvidet kort ved gruppebytte
+    localStorage.setItem("gruppe", g);
+    glider.style.transform = "translateX(" + GRUPPE_REKKEFOLGE.indexOf(g) * 100 + "%)";
+    for (const s of segments) {
+      const aktiv = s.dataset.gruppe === g;
+      s.classList.toggle("active", aktiv);
+      s.setAttribute("aria-selected", String(aktiv));
+    }
+    if (forstegang) {
+      renderBoard();
+      let i = 0;
+      for (const el of board.querySelectorAll(".kolonne")) {
+        el.style.setProperty("--inn-x", "0px");
+        el.style.setProperty("--inn-y", "14px");
+        el.style.animationDelay = 120 + i++ * 55 + "ms";
+        el.classList.add("kol-inn");
+      }
+      return;
+    }
+    morfLayout(renderBoard, retning);
+  }
+
+  // Utvid kortet (eller lukk det hvis det allerede er åpent)
+  function velgKat(navn) {
+    aktivKat = aktivKat === navn ? null : navn;
+    morfLayout(renderBoard, 1);
   }
 
   for (const s of segments) {
@@ -335,80 +333,65 @@
     })[c]);
   }
 
-  /* Bento-mosaikk: kuraterte fliser med eksplisitt plassering i et 6×6-nett,
-     tilpasset innholdet slik at flisene tesselerer flaten uten hull. Nye
-     kategorier (uten oppføring her) faller tilbake til et automatisk spenn. */
-  const FLISMONSTER = {
-    voksen: {
-      "Caput":            { col: "1 / 3", row: "1 / 3" },
-      "Underekstremitet": { col: "1 / 3", row: "3 / 7" },
-      "Thorax / Abdomen": { col: "3 / 5", row: "1 / 4" },
-      "Columna":          { col: "3 / 5", row: "4 / 7" },
-      "Overekstremitet":  { col: "5 / 7", row: "1 / 4", spalter: 2 },
-      "Bekken":           { col: "5 / 7", row: "4 / 7" }
-    },
-    barn: {
-      "Overekstremitet":     { col: "1 / 3", row: "1 / 4" },
-      "Underekstremitet":    { col: "1 / 3", row: "4 / 7" },
-      "Thorax / Abdomen":    { col: "3 / 5", row: "1 / 4" },
-      "Columna":             { col: "3 / 5", row: "4 / 7" },
-      "Spesialundersøkelser":{ col: "5 / 7", row: "1 / 5" },
-      "Bekken":              { col: "5 / 7", row: "5 / 7" }
-    }
-  };
+  // Bygger én prosedyrelenke med diskret kopier-knapp
+  function lagProsedyreLenke(p) {
+    const lenke = document.createElement("a");
+    lenke.className = "prosedyre" + (p.url === activeUrl ? " active" : "");
+    lenke.href = p.url;
+    lenke.target = "_blank";
+    lenke.rel = "noopener";
+    lenke.textContent = p.navn;
+    lenke.addEventListener("click", (e) => {
+      if (e.ctrlKey || e.metaKey || e.shiftKey) return; // la nettleseren styre
+      e.preventDefault();
+      velgProsedyre(p);
+    });
 
-  function flisPlassering(kat) {
-    const kuratert = (FLISMONSTER[gruppe] || {})[kat.navn];
-    if (kuratert) return kuratert;
-    // Fallback for ukjente kategorier: spenn etter mengde, auto-plassert
-    const n = kat.prosedyrer.length;
-    if (n >= 9) return { span: { c: 2, r: 4 }, spalter: 2 };
-    if (n >= 5) return { span: { c: 2, r: 3 } };
-    if (n >= 3) return { span: { c: 2, r: 2 } };
-    return { span: { c: 2, r: 2 } };
+    const kopier = document.createElement("span");
+    kopier.className = "kopier";
+    kopier.setAttribute("role", "button");
+    kopier.title = "Kopier lenke til dokumentet";
+    kopier.innerHTML =
+      '<svg class="ik-lenke" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M10 13.5a5 5 0 0 0 7.55.55l2.9-2.9a5 5 0 0 0-7.07-7.07l-1.66 1.65"></path>' +
+      '<path d="M14 10.5a5 5 0 0 0-7.55-.55l-2.9 2.9a5 5 0 0 0 7.07 7.07l1.65-1.65"></path></svg>' +
+      '<svg class="ik-hake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
+      '<polyline points="4.5 12.5 9.5 17.5 19.5 6.5"></polyline></svg>';
+    kopier.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      navigator.clipboard.writeText(p.url).then(() => {
+        kopier.classList.add("kopiert");
+        setTimeout(() => kopier.classList.remove("kopiert"), 1400);
+      }).catch(() => {});
+    });
+    lenke.appendChild(kopier);
+    return lenke;
   }
 
-  // Teller antallet mykt opp fra 0 – et lite livstegn ved lasting
-  function tellOpp(el, mål, suffiks) {
-    const start = performance.now();
-    const varighet = 500;
-    function steg(nå) {
-      const t = Math.min(1, (nå - start) / varighet);
-      const verdi = Math.round(mål * (1 - Math.pow(1 - t, 3)));
-      el.textContent = verdi + suffiks;
-      if (t < 1) requestAnimationFrame(steg);
-    }
-    requestAnimationFrame(steg);
-  }
-
-  function renderBoard(inngang) {
-    board.innerHTML = "";
+  /* Galleri: seks rolige kort med bilde + navn. Ett kort kan utvides og viser
+     da alle prosedyrene; de øvrige krymper til overskrifter og gjør plass.
+     Utvidet kort spenner 2×2 øverst til venstre; de andre flyter rundt. */
+  function renderBoard() {
     const kategorier = GRUPPER[gruppe];
-    board.classList.toggle("enkel", kategorier.length === 1);
-    if (inngang) {
-      board.style.setProperty("--inn-x", inngang.x + "px");
-      board.style.setProperty("--inn-y", inngang.y + "px");
-    }
+    const enkelt = kategorier.length === 1; // «Annet»: vis den ene utvidet
+    board.classList.toggle("enkel", enkelt);
+    board.classList.toggle("har-aktiv", enkelt || !!aktivKat);
+    board.innerHTML = "";
 
-    let i = 0;
     for (const kat of kategorier) {
       const n = kat.prosedyrer.length;
-      const flis = flisPlassering(kat);
-      const kol = document.createElement("section");
-      kol.className = "kolonne" + (inngang ? " kol-inn" : "");
-      kol.dataset.navn = kat.navn;
-      // Bento: eksplisitt plassering i mosaikken (eller auto-spenn som fallback)
-      if (flis.col) {
-        kol.style.gridColumn = flis.col;
-        kol.style.gridRow = flis.row;
-      } else {
-        kol.style.gridColumn = "span " + flis.span.c;
-        kol.style.gridRow = "span " + flis.span.r;
+      const aktiv = enkelt || kat.navn === aktivKat;
+      const kort = document.createElement("section");
+      kort.className = "kolonne" + (aktiv ? " aktiv" : "");
+      kort.dataset.navn = kat.navn;
+      if (aktiv && !enkelt) {
+        kort.style.gridColumn = "1 / 3";
+        kort.style.gridRow = "1 / 3";
       }
-      kol.style.flexGrow = Math.max(1, Math.sqrt(n)).toFixed(2); // for smale skjermer
-      if (inngang) kol.style.animationDelay = (inngang.base || 0) + i++ * 45 + "ms";
 
-      const head = document.createElement("div");
+      const head = document.createElement("button");
+      head.type = "button";
       head.className = "kol-head";
       const bilde = BILDER[kat.navn];
       const suffiks = n === 1 ? " prosedyre" : " prosedyrer";
@@ -421,56 +404,27 @@
         '<div class="kol-tekst">' +
         '<div class="kol-navn">' + escapeHtml(kat.navn) + "</div>" +
         '<div class="kol-antall">' + n + suffiks + "</div>" +
-        "</div>";
-      kol.appendChild(head);
-      if (inngang) tellOpp(head.querySelector(".kol-antall"), n, suffiks);
+        "</div>" +
+        (aktiv && !enkelt
+          ? '<span class="kol-lukk" title="Lukk">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>' +
+            "</span>"
+          : "");
+      if (!enkelt) head.addEventListener("click", () => velgKat(kat.navn));
+      kort.appendChild(head);
 
-      const strek = document.createElement("div");
-      strek.className = "kol-strek";
-      kol.appendChild(strek);
+      if (aktiv) {
+        const strek = document.createElement("div");
+        strek.className = "kol-strek";
+        kort.appendChild(strek);
 
-      const liste = document.createElement("div");
-      liste.className = "kol-liste" + (flis.spalter === 2 ? " to-spalter" : "");
-      for (const p of kat.prosedyrer) {
-        // Ekte lenker: høyreklikk gir nettleserens egen meny («Åpne kobling
-        // i nytt vindu» osv.), mens vanlig klikk bruker dokumentvinduet.
-        const lenke = document.createElement("a");
-        lenke.className = "prosedyre" + (p.url === activeUrl ? " active" : "");
-        lenke.href = p.url;
-        lenke.target = "_blank";
-        lenke.rel = "noopener";
-        lenke.textContent = p.navn;
-        lenke.addEventListener("click", (e) => {
-          if (e.ctrlKey || e.metaKey || e.shiftKey) return; // la nettleseren styre
-          e.preventDefault();
-          velgProsedyre(p);
-        });
-
-        // Diskret kopier lenke-knapp, synlig når pekeren er over raden
-        const kopier = document.createElement("span");
-        kopier.className = "kopier";
-        kopier.setAttribute("role", "button");
-        kopier.title = "Kopier lenke til dokumentet";
-        kopier.innerHTML =
-          '<svg class="ik-lenke" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-          '<path d="M10 13.5a5 5 0 0 0 7.55.55l2.9-2.9a5 5 0 0 0-7.07-7.07l-1.66 1.65"></path>' +
-          '<path d="M14 10.5a5 5 0 0 0-7.55-.55l-2.9 2.9a5 5 0 0 0 7.07 7.07l1.65-1.65"></path></svg>' +
-          '<svg class="ik-hake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
-          '<polyline points="4.5 12.5 9.5 17.5 19.5 6.5"></polyline></svg>';
-        kopier.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          navigator.clipboard.writeText(p.url).then(() => {
-            kopier.classList.add("kopiert");
-            setTimeout(() => kopier.classList.remove("kopiert"), 1400);
-          }).catch(() => {});
-        });
-        lenke.appendChild(kopier);
-
-        liste.appendChild(lenke);
+        const liste = document.createElement("div");
+        liste.className = "kol-liste" + (n >= 8 ? " to-spalter" : "");
+        for (const p of kat.prosedyrer) liste.appendChild(lagProsedyreLenke(p));
+        kort.appendChild(liste);
       }
-      kol.appendChild(liste);
-      board.appendChild(kol);
+
+      board.appendChild(kort);
     }
   }
 
@@ -732,7 +686,8 @@
       vippet.style.transform = "";
       vippet = null;
     }
-    if (!kol || kol.style.transition) return; // ikke under FLIP-morfen
+    // ikke under morf, og ikke på det store aktive kortet
+    if (!kol || kol.style.transition || kol.classList.contains("aktiv")) return;
     const r = kol.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width - 0.5;
     const py = (e.clientY - r.top) / r.height - 0.5;
