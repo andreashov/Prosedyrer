@@ -779,13 +779,36 @@
     }, 350);
   }, 4200);
 
-  /* ---------- Installerbar app ---------- */
-
+  /* ---------- Installerbar app, med selvoppdatering ----------
+     PWA-er viser normalt en ny versjon først ved neste lasting. Her lytter
+     vi etter at en ny service worker tar over, og laster da siden på nytt
+     én gang automatisk – så du alltid ser siste versjon uten å gjøre noe.
+     (Reload skjer bare ved oppdatering, ikke ved aller første besøk.) */
   if ("serviceWorker" in navigator) {
+    let laster = false;
+    const haddeKontroll = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (haddeKontroll && !laster) {
+        laster = true;
+        window.location.reload();
+      }
+    });
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {
-        /* uten service worker fungerer siden helt som før */
-      });
+      navigator.serviceWorker.register("sw.js").then((reg) => {
+        reg.addEventListener("updatefound", () => {
+          const ny = reg.installing;
+          if (ny) ny.addEventListener("statechange", () => {
+            if (ny.state === "installed" && navigator.serviceWorker.controller) {
+              // ny versjon klar – ta over umiddelbart (utløser reload over)
+              if (reg.waiting) reg.waiting.postMessage("hopp-koen");
+            }
+          });
+        });
+      }).catch(() => { /* uten service worker fungerer siden helt som før */ });
+
+      // Se etter oppdateringer også ved gjenåpning av en installert app
+      setInterval(() => navigator.serviceWorker.getRegistration()
+        .then((r) => r && r.update()), 60 * 60 * 1000);
     });
   }
 })();

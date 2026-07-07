@@ -1,7 +1,7 @@
 /* Service worker: gjør siden installerbar og raskt tilgjengelig.
    Strategi: nett først (alt er alltid ferskt når man er på nett),
    med hurtiglager som reserve slik at selve siden åpner uten nett. */
-const CACHE = "prosedyrer-v2";
+const CACHE = "prosedyrer-v3";
 const SKALL = [
   "./",
   "index.html",
@@ -15,6 +15,11 @@ const SKALL = [
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SKALL)));
   self.skipWaiting();
+});
+
+// Lar siden be en ventende worker om å ta over med en gang
+self.addEventListener("message", (e) => {
+  if (e.data === "hopp-koen") self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {
