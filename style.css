@@ -596,17 +596,17 @@ mark {
 /* Bento-mosaikk på PC-skjermer: 12 kolonner × 6 rader som fyller flaten
    eksakt. Hver flis får spenn (bredde × høyde) etter innholdet sitt,
    satt i JS. «Annet» (én flis) beholder den sentrerte flex-layouten. */
-@media (min-width: 1024px) and (min-height: 560px) {
+/* Galleri: seks rolige, moderate kort sentrert med luft rundt */
+@media (min-width: 900px) and (min-height: 520px) {
   .board:not(.enkel) {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    grid-auto-flow: dense;
+    grid-template-columns: repeat(3, minmax(0, 300px));
+    grid-auto-rows: minmax(120px, 186px);
+    justify-content: center;
+    align-content: center;
+    gap: clamp(14px, 1.8vw, 28px);
     flex: 1 1 auto;
   }
-  /* når ett kort er åpent: tre rader, og det aktive spenner 2×2 øverst */
-  .board.har-aktiv:not(.enkel) { grid-template-rows: repeat(3, 1fr); }
-  .kolonne.aktiv { grid-column: 1 / 3; grid-row: 1 / 3; }
 }
 
 
@@ -627,17 +627,19 @@ mark {
   }
 }
 
-/* Bento: bredden styres av innholdsmengden (flex-grow settes per kort i JS),
-   alle kort strekkes til samme høyde – rolig, felles underkant. */
+/* Kort: brukes både som klikkbart gallerikort (knapp) og forgrunnskort */
 .kolonne {
-  flex: 1 1 0;
-  min-width: clamp(140px, 11vw, 220px);
   display: flex;
   flex-direction: column;
   background: var(--surface);
+  border: none;
   border-radius: var(--radius);
   box-shadow: var(--card-shadow);
   overflow: hidden;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
   transition: background 0.3s var(--ease), box-shadow 0.35s var(--ease);
   will-change: transform;
 }
@@ -655,9 +657,9 @@ mark {
   break-inside: avoid;
 }
 
-/* «Annet» har én kolonne – la den stå rolig i midten, naturlig høyde */
+/* «Annet» har én kategori – ett rolig kort sentrert */
 .board.enkel { justify-content: center; align-items: center; flex: 1 1 auto; }
-.board.enkel .kolonne { flex: 0 1 560px; }
+.board.enkel .kolonne { width: min(300px, 80vw); height: 186px; }
 
 /* Overskriften er en klikkbar knapp; kompakt venstrestilt når et kort er åpent */
 .kol-head {
@@ -675,58 +677,94 @@ mark {
   cursor: pointer;
 }
 
-/* Galleri (ingen kort åpent): store, rolige kort med sentrert bilde + navn */
-.board:not(.har-aktiv) .kol-head {
+/* Gallerikort: stor, rolig, sentrert overskrift (bilde + navn + antall) */
+.board .kol-head {
   flex-direction: column;
   justify-content: center;
-  gap: clamp(10px, 1.8vh, 20px);
+  gap: clamp(8px, 1.4vh, 16px);
   height: 100%;
-  padding: clamp(16px, 3vh, 34px);
+  padding: clamp(14px, 2vh, 24px);
   text-align: center;
 }
 
-.board:not(.har-aktiv) .kol-bilde {
-  width: clamp(58px, 8.5vh, 108px);
-  height: clamp(58px, 8.5vh, 108px);
+.board .kol-bilde { width: clamp(48px, 6vh, 74px); height: clamp(48px, 6vh, 74px); }
+.board .kol-tekst { align-items: center; }
+.board .kol-navn { font-size: clamp(14px, 0.5vw + 8px, 17px); }
+.board .kol-antall { font-size: clamp(11px, 0.3vw + 7px, 12.5px); }
+
+/* ---------- Forgrunnskort (hero-overgang) ---------- */
+
+.kortlag {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
 }
 
-.board:not(.har-aktiv) .kol-tekst { align-items: center; }
-.board:not(.har-aktiv) .kol-navn { font-size: clamp(15px, 0.7vw + 8px, 20px); }
-.board:not(.har-aktiv) .kol-antall { font-size: clamp(11.5px, 0.4vw + 6px, 13px); }
-
-/* Små kort når ett er åpent: sentrer overskriften i kortet */
-.board.har-aktiv .kolonne:not(.aktiv) .kol-head {
-  height: 100%;
-  padding: clamp(12px, 1.6vh, 18px) clamp(14px, 1.1vw, 20px);
+.kortlag-bakteppe {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.16);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  backdrop-filter: blur(16px) saturate(1.2);
+  opacity: 0;
+  transition: opacity 0.42s var(--ease);
 }
 
-/* Lukkeknapp på det åpne kortet */
+.kortlag.apen .kortlag-bakteppe { opacity: 1; }
+[data-theme="dark"] .kortlag-bakteppe { background: rgba(0, 0, 0, 0.5); }
+
+.panel {
+  position: relative;
+  z-index: 1;
+  width: min(720px, 92vw);
+  max-height: 84vh;
+  box-shadow: var(--pop-shadow);
+}
+
+.panel .kol-liste { overflow-y: auto; }
+
+/* Innholdet toner inn mens rammen flyr på plass (skjuler skalastrekk) */
+.panel .kol-strek,
+.panel .kol-liste { transition: opacity 0.3s var(--ease) 0.12s; }
+.panel.morfer .kol-strek,
+.panel.morfer .kol-liste { opacity: 0; }
+
+/* Kompakt overskrift på forgrunnskortet */
+.panel .kol-head {
+  flex-direction: row;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 12px;
+  height: auto;
+  padding: clamp(14px, 1.9vh, 18px) clamp(16px, 1.3vw, 22px) clamp(10px, 1.4vh, 14px);
+}
+.panel .kol-bilde { width: 46px; height: 46px; }
+.panel .kol-tekst { align-items: flex-start; }
+.panel .kol-navn { font-size: 16px; }
+.panel .kol-antall { font-size: 12px; }
+
+/* Lukkeknapp på forgrunnskortet */
 .kol-lukk {
   margin-left: auto;
   align-self: flex-start;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
+  border: none;
+  background: transparent;
   border-radius: 50%;
   color: var(--faint);
+  cursor: pointer;
   transition: color 0.15s var(--ease), background 0.15s var(--ease);
 }
 
-.kol-head:hover .kol-lukk { color: var(--dim); }
 .kol-lukk:hover { color: var(--text); background: var(--seg-track); }
-.kol-lukk svg { width: 13px; height: 13px; }
-
-/* Innholdet i det åpne kortet toner mykt inn etter morfen */
-.kolonne.aktiv .kol-strek,
-.kolonne.aktiv .kol-liste {
-  animation: listeInn 0.4s var(--ease) 0.14s both;
-}
-
-@keyframes listeInn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
-}
+.kol-lukk svg { width: 14px; height: 14px; }
 
 .kol-bilde {
   width: clamp(38px, 3vw, 52px);
