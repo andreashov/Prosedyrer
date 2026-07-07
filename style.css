@@ -93,8 +93,9 @@ body {
   transition: background 0.3s var(--ease);
 }
 
-/* Dybde i bakgrunnen: lysest øverst bak logoen, med et snev av logoens
-   farge, gradvis mørkere nedover. */
+/* Bakgrunn: en myk magenta-glød rundt logoen som fader helt ut i bakgrunns-
+   fargen. Et tynt topp-slør (bg → gjennomsiktig) sikrer at selve toppkanten
+   er ren bakgrunnsfarge, så det ikke blir en synlig kant mot adressefeltet. */
 body::before {
   content: "";
   position: fixed;
@@ -102,22 +103,18 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(900px 420px at 50% -80px,
-      color-mix(in srgb, var(--accent) 5%, transparent), transparent 72%),
-    linear-gradient(180deg,
-      color-mix(in srgb, #ffffff 55%, var(--bg)) 0%,
-      var(--bg) 38%,
-      color-mix(in srgb, #000000 4%, var(--bg)) 100%);
+    linear-gradient(180deg, var(--bg) 0, transparent 44px),
+    radial-gradient(520px 300px at 50% 56px,
+      color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 62%),
+    linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, #000000 4%, var(--bg)) 100%);
 }
 
 [data-theme="dark"] body::before {
   background:
-    radial-gradient(900px 420px at 50% -80px,
-      color-mix(in srgb, var(--accent) 7%, transparent), transparent 72%),
-    linear-gradient(180deg,
-      color-mix(in srgb, #ffffff 3.5%, var(--bg)) 0%,
-      var(--bg) 38%,
-      color-mix(in srgb, #000000 30%, var(--bg)) 100%);
+    linear-gradient(180deg, var(--bg) 0, transparent 44px),
+    radial-gradient(560px 320px at 50% 56px,
+      color-mix(in srgb, var(--accent) 15%, transparent) 0%, transparent 62%),
+    linear-gradient(180deg, var(--bg) 0%, color-mix(in srgb, #000000 30%, var(--bg)) 100%);
 }
 
 /* Et hint av korn oppå gradienten – fjerner digital sterilitet */
@@ -163,25 +160,8 @@ body::after {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Svak glød bak logoen i sidens aksentfarge – driver sakte, som om siden puster */
-.topbar::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: -30%;
-  width: 360px;
-  height: 190%;
-  border-radius: 50%;
-  background: radial-gradient(closest-side,
-    color-mix(in srgb, var(--accent) 9%, transparent), transparent);
-  pointer-events: none;
-  animation: gloedDrift 9s ease-in-out infinite;
-}
-
-@keyframes gloedDrift {
-  0%, 100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
-  50% { transform: translate(calc(-50% + 16px), 8px) scale(1.08); opacity: 0.82; }
-}
+/* (Gløden bak logoen ligger nå i body::before, maskert i toppen så den
+   fader rent ut i bakgrunnsfargen uten synlig kant.) */
 
 /* Mørk modus: sorte partier i logoen blir hvite, rosafargen bevares omtrent */
 [data-theme="dark"] .logo {
@@ -627,6 +607,22 @@ mark {
   }
 }
 
+/* Utgang ved gruppebytte: kortet glir sideveis, krymper litt og toner bort */
+.kol-ut {
+  animation: kolUt 0.26s var(--ease) forwards;
+}
+
+@keyframes kolUt {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--ut-x), 0) scale(0.965);
+  }
+}
+
 /* Kort: brukes både som klikkbart gallerikort (knapp) og forgrunnskort */
 .kolonne {
   display: flex;
@@ -657,9 +653,17 @@ mark {
   break-inside: avoid;
 }
 
-/* «Annet» har én kategori – ett rolig kort sentrert */
+/* «Annet» har én kategori – alle lenkene vises direkte i ett rolig kort,
+   sentrert på flaten. Kortet vokser etter innholdet og ruller innvendig. */
 .board.enkel { justify-content: center; align-items: center; flex: 1 1 auto; }
-.board.enkel .kolonne { width: min(300px, 80vw); height: 186px; }
+.board.enkel .kolonne {
+  width: min(560px, 92vw);
+  height: auto;
+  max-height: min(84vh, 100%);
+  cursor: default;
+}
+.board.enkel .kolonne:has(.to-spalter) { width: min(680px, 92vw); }
+.board.enkel .kolonne:hover { box-shadow: var(--card-shadow); }
 
 /* Overskriften er en klikkbar knapp; kompakt venstrestilt når et kort er åpent */
 .kol-head {
@@ -720,21 +724,37 @@ mark {
 .panel {
   position: relative;
   z-index: 1;
-  width: min(720px, 92vw);
+  width: min(560px, 92vw);
   max-height: 84vh;
   box-shadow: var(--pop-shadow);
 }
 
-.panel .kol-liste { overflow-y: auto; }
+/* Bredere kort bare når innholdet faktisk trenger to spalter */
+.panel:has(.to-spalter) { width: min(680px, 92vw); }
+
+.panel .kol-liste,
+.apent-inline .kol-liste {
+  overflow-y: auto;
+  padding-bottom: clamp(8px, 1.4vh, 14px);
+}
+
+/* Litt luftigere linjer i det åpne kortet */
+.panel .prosedyre,
+.apent-inline .prosedyre {
+  padding-top: clamp(8px, 1vh, 11px);
+  padding-bottom: clamp(8px, 1vh, 11px);
+  font-size: 14px;
+}
 
 /* Innholdet toner inn mens rammen flyr på plass (skjuler skalastrekk) */
 .panel .kol-strek,
-.panel .kol-liste { transition: opacity 0.3s var(--ease) 0.12s; }
+.panel .kol-liste { transition: opacity 0.28s var(--ease) 0.14s; }
 .panel.morfer .kol-strek,
 .panel.morfer .kol-liste { opacity: 0; }
 
-/* Kompakt overskrift på forgrunnskortet */
-.panel .kol-head {
+/* Kompakt overskrift på forgrunnskortet og «Annet»-kortet */
+.panel .kol-head,
+.apent-inline .kol-head {
   flex-direction: row;
   justify-content: flex-start;
   text-align: left;
@@ -742,10 +762,14 @@ mark {
   height: auto;
   padding: clamp(14px, 1.9vh, 18px) clamp(16px, 1.3vw, 22px) clamp(10px, 1.4vh, 14px);
 }
-.panel .kol-bilde { width: 46px; height: 46px; }
-.panel .kol-tekst { align-items: flex-start; }
-.panel .kol-navn { font-size: 16px; }
-.panel .kol-antall { font-size: 12px; }
+.panel .kol-bilde,
+.apent-inline .kol-bilde { width: 46px; height: 46px; }
+.panel .kol-tekst,
+.apent-inline .kol-tekst { align-items: flex-start; }
+.panel .kol-navn,
+.apent-inline .kol-navn { font-size: 16px; }
+.panel .kol-antall,
+.apent-inline .kol-antall { font-size: 12px; }
 
 /* Lukkeknapp på forgrunnskortet */
 .kol-lukk {

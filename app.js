@@ -250,39 +250,15 @@
 
   const GRUPPE_REKKEFOLGE = ["voksen", "barn", "annet"];
 
-  /* Generisk FLIP-morf: mål gamle kortposisjoner, bygg om tavlen, og la hvert
-     kort gli/skalere smidig fra der det var til der det havnet. Brukes både
-     når man utvider/lukker et kort og når man bytter gruppe. */
-  function morfLayout(byggOm, retning) {
-    const gamle = new Map();
+  /* Kaskader kortene inn: de stiger og glir inn fra en retning, ett etter ett.
+     «start» gir en litt roligere inngang første gang siden vises. */
+  function animerInn(retning, start) {
+    let i = 0;
     for (const el of board.querySelectorAll(".kolonne")) {
-      gamle.set(el.dataset.navn, el.getBoundingClientRect());
-    }
-    byggOm();
-    let nyIndeks = 0;
-    for (const el of board.querySelectorAll(".kolonne")) {
-      const f = gamle.get(el.dataset.navn);
-      if (f) {
-        const r = el.getBoundingClientRect();
-        el.style.transformOrigin = "top left";
-        el.style.transition = "none";
-        el.style.transform =
-          "translate(" + (f.left - r.left) + "px," + (f.top - r.top) + "px) scale(" +
-          (f.width / r.width) + "," + (f.height / r.height) + ")";
-        void el.offsetWidth;
-        el.style.transition = "transform 0.5s cubic-bezier(0.32, 0.72, 0, 1)";
-        el.style.transform = "";
-        el.addEventListener("transitionend", function rydd() {
-          el.style.transition = "";
-          el.style.transformOrigin = "";
-          el.removeEventListener("transitionend", rydd);
-        });
-      } else {
-        el.style.setProperty("--inn-x", (retning || 1) * 26 + "px");
-        el.style.setProperty("--inn-y", "0px");
-        el.style.animationDelay = 80 + nyIndeks++ * 45 + "ms";
-        el.classList.add("kol-inn");
-      }
+      el.style.setProperty("--inn-x", (start ? 0 : retning * 22) + "px");
+      el.style.setProperty("--inn-y", (start ? 14 : 10) + "px");
+      el.style.animationDelay = (start ? 120 : 30) + i++ * (start ? 55 : 42) + "ms";
+      el.classList.add("kol-inn");
     }
   }
 
@@ -300,16 +276,32 @@
     }
     if (forstegang) {
       renderBoard();
-      let i = 0;
-      for (const el of board.querySelectorAll(".kolonne")) {
-        el.style.setProperty("--inn-x", "0px");
-        el.style.setProperty("--inn-y", "14px");
-        el.style.animationDelay = 120 + i++ * 55 + "ms";
-        el.classList.add("kol-inn");
-      }
+      animerInn(retning, true);
       return;
     }
-    morfLayout(renderBoard, retning);
+
+    /* Stilig gruppebytte: de gjeldende kortene glir ut sideveis og toner bort
+       i motsatt retning av bevegelsen, deretter kaskaderer de nye kortene inn
+       fra samme kant. Ingen morf av selve rutenettet – en ren, retningsbestemt
+       overgang som følger den glidende bryteren. */
+    const gamle = Array.from(board.querySelectorAll(".kolonne"));
+    if (!gamle.length) {
+      renderBoard();
+      animerInn(retning, false);
+      return;
+    }
+    let i = 0;
+    for (const el of gamle) {
+      el.style.setProperty("--ut-x", -retning * 20 + "px");
+      el.style.animationDelay = i++ * 18 + "ms";
+      el.classList.remove("kol-inn");
+      el.classList.add("kol-ut");
+    }
+    const ventetid = 150 + gamle.length * 18;
+    setTimeout(() => {
+      renderBoard();
+      animerInn(retning, false);
+    }, ventetid);
   }
 
   for (const s of segments) {
@@ -330,6 +322,7 @@
   let panel = null;       // forgrunnskortet
   let panelKilde = null;  // gallerikortet det kom fra
 
+  const HERO_EASE = "cubic-bezier(0.22, 1, 0.36, 1)"; // myk «ease-out», Apple-aktig
   const LUKK_SVG =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>';
 
@@ -385,18 +378,21 @@
 
     // FLIP: start ved kildekortets posisjon/størrelse, animer til senter
     flipFra(panel, kilde.getBoundingClientRect());
+    panel.style.opacity = "0";
     kilde.style.visibility = "hidden";
     void panel.offsetWidth;
     requestAnimationFrame(() => {
       kortlag.classList.add("apen");
-      panel.style.transition = "transform 0.46s cubic-bezier(0.32, 0.72, 0, 1)";
+      panel.style.transition = "transform 0.5s " + HERO_EASE + ", opacity 0.28s ease-out";
       panel.style.transform = "";
-      panel.addEventListener("transitionend", function ferdig() {
+      panel.style.opacity = "1";
+      panel.addEventListener("transitionend", function ferdig(e) {
+        if (e.propertyName !== "transform") return;
         panel.classList.remove("morfer");
         panel.style.transition = "";
         panel.style.transformOrigin = "";
         panel.removeEventListener("transitionend", ferdig);
-      }, { once: true });
+      });
     });
   }
 
@@ -420,18 +416,20 @@
     p.classList.add("morfer");
     kortlag.classList.remove("apen");
     p.style.transformOrigin = "top left";
-    p.style.transition = "transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)";
+    p.style.transition = "transform 0.42s " + HERO_EASE + ", opacity 0.32s ease-in";
     requestAnimationFrame(() => {
+      p.style.opacity = "0";
       p.style.transform =
         "translate(" + (R0.left - R1.left) + "px," + (R0.top - R1.top) + "px) scale(" +
         (R0.width / R1.width) + "," + (R0.height / R1.height) + ")";
     });
-    p.addEventListener("transitionend", function ferdig() {
+    p.addEventListener("transitionend", function ferdig(e) {
+      if (e.propertyName !== "transform") return;
       kortlag.classList.add("hidden");
       p.remove();
       kilde.style.visibility = "";
       p.removeEventListener("transitionend", ferdig);
-    }, { once: true });
+    });
   }
 
   kortBakteppe.addEventListener("click", () => lukkKort());
@@ -483,32 +481,56 @@
     return lenke;
   }
 
-  /* Galleri: rolige, mindre kort med bilde + navn + antall. Klikk et kort og
-     det flyr opp i forgrunnen (openKort) og viser alle prosedyrene. */
+  function korthode(kat, n) {
+    const bilde = BILDER[kat.navn];
+    const suffiks = n === 1 ? " prosedyre" : " prosedyrer";
+    return (
+      '<div class="kol-head">' +
+      '<div class="kol-bilde">' +
+      (bilde
+        ? '<img src="' + encodeURI(bilde) + '" alt="" loading="lazy">'
+        : '<span class="kol-emoji">' + iconFor(kat.navn, kat.admin) + "</span>") +
+      "</div>" +
+      '<div class="kol-tekst">' +
+      '<div class="kol-navn">' + escapeHtml(kat.navn) + "</div>" +
+      '<div class="kol-antall">' + n + suffiks + "</div>" +
+      "</div></div>"
+    );
+  }
+
+  /* Galleri: rolige kort med bilde + navn + antall. Klikk et kort og det flyr
+     opp i forgrunnen (openKort). Er det bare én kategori («Annet»), vises alle
+     lenkene direkte i ett rolig kort. */
   function renderBoard() {
     const kategorier = GRUPPER[gruppe];
-    board.classList.toggle("enkel", kategorier.length === 1);
+    const enkelt = kategorier.length === 1;
+    board.classList.toggle("enkel", enkelt);
     board.innerHTML = "";
 
     for (const kat of kategorier) {
       const n = kat.prosedyrer.length;
+
+      if (enkelt) {
+        const kort = document.createElement("section");
+        kort.className = "kolonne apent-inline";
+        kort.dataset.navn = kat.navn;
+        kort.innerHTML = korthode(kat, n);
+        const strek = document.createElement("div");
+        strek.className = "kol-strek";
+        kort.appendChild(strek);
+        const liste = document.createElement("div");
+        liste.className = "kol-liste" + (n >= 8 ? " to-spalter" : "");
+        for (const p of kat.prosedyrer) liste.appendChild(lagProsedyreLenke(p));
+        kort.appendChild(liste);
+        board.appendChild(kort);
+        continue;
+      }
+
       const kort = document.createElement("button");
       kort.type = "button";
       kort.className = "kolonne";
       kort.dataset.navn = kat.navn;
-      const bilde = BILDER[kat.navn];
-      const suffiks = n === 1 ? " prosedyre" : " prosedyrer";
-      kort.innerHTML =
-        '<div class="kol-head">' +
-        '<div class="kol-bilde">' +
-        (bilde
-          ? '<img src="' + encodeURI(bilde) + '" alt="" loading="lazy">'
-          : '<span class="kol-emoji">' + iconFor(kat.navn, kat.admin) + "</span>") +
-        "</div>" +
-        '<div class="kol-tekst">' +
-        '<div class="kol-navn">' + escapeHtml(kat.navn) + "</div>" +
-        '<div class="kol-antall">' + n + suffiks + "</div>" +
-        "</div></div>";
+      kort.innerHTML = korthode(kat, n);
       kort.addEventListener("click", () => openKort(kat, kort));
       board.appendChild(kort);
     }
