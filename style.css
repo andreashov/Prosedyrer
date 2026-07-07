@@ -596,7 +596,7 @@ mark {
 /* Bento-mosaikk på PC-skjermer: 12 kolonner × 6 rader som fyller flaten
    eksakt. Hver flis får spenn (bredde × høyde) etter innholdet sitt,
    satt i JS. «Annet» (én flis) beholder den sentrerte flex-layouten. */
-@media (min-width: 1280px) and (min-height: 1040px) {
+@media (min-width: 1180px) and (min-height: 680px) {
   .board:not(.enkel) {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -605,6 +605,7 @@ mark {
     flex: 1 1 auto;
   }
 }
+
 
 /* Inngang: kolonnene kaskaderer inn fra motsatt side (eller stiger ved last).
    «backwards» (ikke «both») slik at hover-løftet virker etter animasjonen. */
@@ -818,4 +819,23 @@ mark {
   .kolonne { flex: 1 1 300px; }
   .kol-liste { overflow: visible; }
   .spotlight-results { max-height: 60vh; }
+}
+
+/* ---------- Kompaktere luft på lavere laptop-skjermer ----------
+   Plassert sist så disse overstyrer basisreglene (media-queries øker ikke
+   spesifisitet). Gir mosaikkflisene nok høyde til å vise alt uten intern
+   rulling ned mot ~800 px vindushøyde. */
+@media (min-width: 1180px) and (max-height: 980px) {
+  .topbar { padding-top: clamp(8px, 1.4vh, 16px); }
+  .hero {
+    gap: clamp(8px, 1.3vh, 14px);
+    padding: clamp(10px, 1.8vh, 20px) 16px clamp(8px, 1.3vh, 14px);
+  }
+  .kol-head {
+    padding: clamp(8px, 1.2vh, 12px) clamp(12px, 1vw, 18px) clamp(6px, 0.9vh, 10px);
+    gap: 10px;
+  }
+  .kol-bilde { width: clamp(30px, 2.3vw, 40px); height: clamp(30px, 2.3vw, 40px); }
+  .kol-liste { padding-top: 2px; padding-bottom: clamp(4px, 0.8vh, 8px); }
+  .prosedyre { padding-top: clamp(3.5px, 0.6vh, 7px); padding-bottom: clamp(3.5px, 0.6vh, 7px); }
 }
