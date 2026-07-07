@@ -275,6 +275,19 @@
       gamle.set(el.dataset.navn, el.getBoundingClientRect());
     }
 
+    // Ingen felles kategorier (inn/ut av «Annet»): morf ut, så inn
+    const nyeNavn = new Set(GRUPPER[g].map((k) => k.navn));
+    const harFelles = Array.from(gamle.keys()).some((navn) => nyeNavn.has(navn));
+    if (!harFelles) {
+      for (const el of board.querySelectorAll(".kolonne")) {
+        el.style.transition = "transform 0.18s ease-in, opacity 0.18s ease-in";
+        el.style.transform = "translateX(" + -retning * 22 + "px) scale(0.96)";
+        el.style.opacity = "0";
+      }
+      setTimeout(() => renderBoard({ x: retning * 26, y: 0, base: 30 }), 170);
+      return;
+    }
+
     renderBoard(null);
 
     const nye = board.querySelectorAll(".kolonne");
@@ -322,6 +335,39 @@
     })[c]);
   }
 
+  /* Bento-mosaikk: kuraterte fliser med eksplisitt plassering i et 6×6-nett,
+     tilpasset innholdet slik at flisene tesselerer flaten uten hull. Nye
+     kategorier (uten oppføring her) faller tilbake til et automatisk spenn. */
+  const FLISMONSTER = {
+    voksen: {
+      "Caput":            { col: "1 / 3", row: "1 / 3" },
+      "Underekstremitet": { col: "1 / 3", row: "3 / 7" },
+      "Thorax / Abdomen": { col: "3 / 5", row: "1 / 4" },
+      "Columna":          { col: "3 / 5", row: "4 / 7" },
+      "Overekstremitet":  { col: "5 / 7", row: "1 / 4", spalter: 2 },
+      "Bekken":           { col: "5 / 7", row: "4 / 7" }
+    },
+    barn: {
+      "Overekstremitet":     { col: "1 / 3", row: "1 / 4" },
+      "Underekstremitet":    { col: "1 / 3", row: "4 / 7" },
+      "Thorax / Abdomen":    { col: "3 / 5", row: "1 / 4" },
+      "Columna":             { col: "3 / 5", row: "4 / 7" },
+      "Spesialundersøkelser":{ col: "5 / 7", row: "1 / 5" },
+      "Bekken":              { col: "5 / 7", row: "5 / 7" }
+    }
+  };
+
+  function flisPlassering(kat) {
+    const kuratert = (FLISMONSTER[gruppe] || {})[kat.navn];
+    if (kuratert) return kuratert;
+    // Fallback for ukjente kategorier: spenn etter mengde, auto-plassert
+    const n = kat.prosedyrer.length;
+    if (n >= 9) return { span: { c: 2, r: 4 }, spalter: 2 };
+    if (n >= 5) return { span: { c: 2, r: 3 } };
+    if (n >= 3) return { span: { c: 2, r: 2 } };
+    return { span: { c: 2, r: 2 } };
+  }
+
   // Teller antallet mykt opp fra 0 – et lite livstegn ved lasting
   function tellOpp(el, mål, suffiks) {
     const start = performance.now();
@@ -347,11 +393,19 @@
     let i = 0;
     for (const kat of kategorier) {
       const n = kat.prosedyrer.length;
+      const flis = flisPlassering(kat);
       const kol = document.createElement("section");
       kol.className = "kolonne" + (inngang ? " kol-inn" : "");
       kol.dataset.navn = kat.navn;
-      // Bento: bredden vokser med innholdsmengden
-      kol.style.flexGrow = Math.max(1, Math.sqrt(n)).toFixed(2);
+      // Bento: eksplisitt plassering i mosaikken (eller auto-spenn som fallback)
+      if (flis.col) {
+        kol.style.gridColumn = flis.col;
+        kol.style.gridRow = flis.row;
+      } else {
+        kol.style.gridColumn = "span " + flis.span.c;
+        kol.style.gridRow = "span " + flis.span.r;
+      }
+      kol.style.flexGrow = Math.max(1, Math.sqrt(n)).toFixed(2); // for smale skjermer
       if (inngang) kol.style.animationDelay = (inngang.base || 0) + i++ * 45 + "ms";
 
       const head = document.createElement("div");
@@ -364,8 +418,10 @@
           ? '<img src="' + encodeURI(bilde) + '" alt="" loading="lazy">'
           : '<span class="kol-emoji">' + iconFor(kat.navn, kat.admin) + "</span>") +
         "</div>" +
+        '<div class="kol-tekst">' +
         '<div class="kol-navn">' + escapeHtml(kat.navn) + "</div>" +
-        '<div class="kol-antall">' + n + suffiks + "</div>";
+        '<div class="kol-antall">' + n + suffiks + "</div>" +
+        "</div>";
       kol.appendChild(head);
       if (inngang) tellOpp(head.querySelector(".kol-antall"), n, suffiks);
 
@@ -374,7 +430,7 @@
       kol.appendChild(strek);
 
       const liste = document.createElement("div");
-      liste.className = "kol-liste" + (n >= 8 ? " to-spalter" : "");
+      liste.className = "kol-liste" + (flis.spalter === 2 ? " to-spalter" : "");
       for (const p of kat.prosedyrer) {
         // Ekte lenker: høyreklikk gir nettleserens egen meny («Åpne kobling
         // i nytt vindu» osv.), mens vanlig klikk bruker dokumentvinduet.

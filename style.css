@@ -580,8 +580,6 @@ mark {
 /* ---------- Tavlen: kolonner per kroppsregion ---------- */
 
 .board {
-  /* vokser til innholdet (høyeste kort), krymper ved behov – aldri lenger.
-     Ledig plass havner på bakgrunnen, ikke inne i kortene. */
   flex: 0 1 auto;
   min-height: 0;
   display: flex;
@@ -593,6 +591,19 @@ mark {
   padding: clamp(8px, 1.8vh, 20px) clamp(14px, 2.2vw, 36px) clamp(14px, 2.6vh, 30px);
   --inn-x: 0px;
   --inn-y: 14px;
+}
+
+/* Bento-mosaikk på PC-skjermer: 12 kolonner × 6 rader som fyller flaten
+   eksakt. Hver flis får spenn (bredde × høyde) etter innholdet sitt,
+   satt i JS. «Annet» (én flis) beholder den sentrerte flex-layouten. */
+@media (min-width: 1280px) and (min-height: 1040px) {
+  .board:not(.enkel) {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    grid-auto-flow: dense;
+    flex: 1 1 auto;
+  }
 }
 
 /* Inngang: kolonnene kaskaderer inn fra motsatt side (eller stiger ved last).
@@ -641,40 +652,49 @@ mark {
 }
 
 /* «Annet» har én kolonne – la den stå rolig i midten, naturlig høyde */
-.board.enkel { justify-content: center; align-items: center; }
+.board.enkel { justify-content: center; align-items: center; flex: 1 1 auto; }
 .board.enkel .kolonne { flex: 0 1 560px; }
 
+/* Kompakt, venstrestilt flisoverskrift – frigjør høyde til innholdet */
 .kol-head {
-  text-align: center;
-  padding: clamp(12px, 2.2vh, 22px) 12px clamp(8px, 1.4vh, 14px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: clamp(11px, 1.8vh, 16px) clamp(12px, 1vw, 18px) clamp(9px, 1.4vh, 13px);
   flex-shrink: 0;
 }
 
 .kol-bilde {
-  height: clamp(44px, 7.5vh, 78px);
+  width: clamp(38px, 3vw, 52px);
+  height: clamp(38px, 3vw, 52px);
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .kol-bilde img {
-  /* eksplisitt høyde – prosenter løses ikke pålitelig opp her */
-  height: clamp(40px, 6.8vh, 70px);
-  width: auto;
-  max-width: 86%;
+  max-height: 100%;
+  max-width: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.18));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
 }
 
 .kol-emoji {
-  font-size: clamp(28px, 4.6vh, 44px);
+  font-size: clamp(24px, 2.4vw, 34px);
   line-height: 1;
 }
 
+.kol-tekst {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
 .kol-navn {
-  margin-top: clamp(6px, 1.2vh, 12px);
-  font-size: clamp(13px, 0.8vw + 4px, 15px);
-  font-weight: 650;
+  font-size: clamp(13px, 0.55vw + 6px, 15.5px);
+  font-weight: 680;
   letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
@@ -682,7 +702,6 @@ mark {
 }
 
 .kol-antall {
-  margin-top: 1px;
   font-size: 11px;
   color: var(--faint);
 }
@@ -690,7 +709,7 @@ mark {
 .kol-strek {
   height: 1px;
   background: var(--hairline);
-  margin: 0 14px;
+  margin: 0 clamp(12px, 1vw, 18px);
   flex-shrink: 0;
 }
 
