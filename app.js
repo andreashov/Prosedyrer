@@ -329,7 +329,7 @@
   function byggPanel(kat) {
     const n = kat.prosedyrer.length;
     const el = document.createElement("section");
-    el.className = "kolonne panel morfer";
+    el.className = "kolonne panel";
     el.dataset.navn = kat.navn;
     const bilde = BILDER[kat.navn];
     const suffiks = n === 1 ? " prosedyre" : " prosedyrer";
@@ -359,13 +359,13 @@
     return el;
   }
 
-  function flipFra(el, R0) {
-    const R1 = el.getBoundingClientRect();
-    el.style.transformOrigin = "top left";
-    el.style.transition = "none";
-    el.style.transform =
-      "translate(" + (R0.left - R1.left) + "px," + (R0.top - R1.top) + "px) scale(" +
-      (R0.width / R1.width) + "," + (R0.height / R1.height) + ")";
+  /* Måler forskyvningen fra ett korts senter til et annet – brukes til å heve
+     panelet opp fra det klikkede gallerikortet (og sende det tilbake). */
+  function senterDelta(fra, til) {
+    return {
+      dx: (fra.left + fra.width / 2) - (til.left + til.width / 2),
+      dy: (fra.top + fra.height / 2) - (til.top + til.height / 2)
+    };
   }
 
   function openKort(kat, kilde) {
@@ -376,20 +376,25 @@
     kortlag.appendChild(panel);
     kortlag.classList.remove("hidden");
 
-    // FLIP: start ved kildekortets posisjon/størrelse, animer til senter
-    flipFra(panel, kilde.getBoundingClientRect());
+    /* Panelet står ferdig bygd i endelig størrelse (skarp tekst hele veien).
+       Vi hever det opp fra det klikkede kortets plass med en JEVN skala
+       (lik i begge retninger = ingen tekststrekk) mens det toner inn –
+       bevegelse og innhold synkront, uten etterslep. */
+    const { dx, dy } = senterDelta(kilde.getBoundingClientRect(), panel.getBoundingClientRect());
+    panel.style.transformOrigin = "center center";
+    panel.style.transform = "translate(" + dx + "px," + dy + "px) scale(0.92)";
     panel.style.opacity = "0";
     kilde.style.visibility = "hidden";
     void panel.offsetWidth;
     requestAnimationFrame(() => {
       kortlag.classList.add("apen");
-      panel.style.transition = "transform 0.5s " + HERO_EASE + ", opacity 0.28s ease-out";
+      panel.style.transition = "transform 0.44s " + HERO_EASE + ", opacity 0.34s ease-out";
       panel.style.transform = "";
       panel.style.opacity = "1";
       panel.addEventListener("transitionend", function ferdig(e) {
         if (e.propertyName !== "transform") return;
-        panel.classList.remove("morfer");
         panel.style.transition = "";
+        panel.style.transform = "";
         panel.style.transformOrigin = "";
         panel.removeEventListener("transitionend", ferdig);
       });
@@ -410,18 +415,15 @@
       return;
     }
 
-    // Animer forgrunnskortet tilbake til gallerikortets plass
-    const R1 = p.getBoundingClientRect();      // nå (sentrert)
-    const R0 = kilde.getBoundingClientRect();  // mål (galleriplassen)
-    p.classList.add("morfer");
+    // Speil hevingen: panelet glir tilbake mot gallerikortets plass, skalerer
+    // jevnt ned og toner ut – synkront, uten tekststrekk.
+    const { dx, dy } = senterDelta(kilde.getBoundingClientRect(), p.getBoundingClientRect());
     kortlag.classList.remove("apen");
-    p.style.transformOrigin = "top left";
-    p.style.transition = "transform 0.42s " + HERO_EASE + ", opacity 0.32s ease-in";
+    p.style.transformOrigin = "center center";
+    p.style.transition = "transform 0.4s " + HERO_EASE + ", opacity 0.3s ease-in";
     requestAnimationFrame(() => {
       p.style.opacity = "0";
-      p.style.transform =
-        "translate(" + (R0.left - R1.left) + "px," + (R0.top - R1.top) + "px) scale(" +
-        (R0.width / R1.width) + "," + (R0.height / R1.height) + ")";
+      p.style.transform = "translate(" + dx + "px," + dy + "px) scale(0.92)";
     });
     p.addEventListener("transitionend", function ferdig(e) {
       if (e.propertyName !== "transform") return;
