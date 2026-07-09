@@ -740,10 +740,14 @@ mark {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.16);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
-  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(13px) saturate(1.2);
+  backdrop-filter: blur(13px) saturate(1.2);
   opacity: 0;
-  transition: opacity 0.42s var(--ease);
+  /* Kortere enn kortets flukt (0,42 s), så bakteppet er ferdig uttonet FØR
+     laget fjernes – ingen brå «snap» på slutten av lukkingen. will-change
+     lar kompositoren tone opasiteten uten å reberegne uskarpheten per bilde. */
+  transition: opacity 0.34s var(--ease);
+  will-change: opacity;
 }
 
 .kortlag.apen .kortlag-bakteppe { opacity: 1; }
