@@ -420,7 +420,7 @@
     const { dx, dy } = senterDelta(kilde.getBoundingClientRect(), p.getBoundingClientRect());
     kortlag.classList.remove("apen");
     p.style.transformOrigin = "center center";
-    p.style.transition = "transform 0.4s " + HERO_EASE + ", opacity 0.3s ease-in";
+    p.style.transition = "transform 0.36s " + HERO_EASE + ", opacity 0.34s ease-in";
     requestAnimationFrame(() => {
       p.style.opacity = "0";
       p.style.transform = "translate(" + dx + "px," + dy + "px) scale(0.92)";

@@ -597,11 +597,22 @@ mark {
      auto-marg deler den ledige høyden likt, så komposisjonen får jevn luft
      over og under i stedet for å henge i toppen med et hult tomrom på midten. */
   .hero { margin-top: auto; }
+  /* Tavla reserverer ALLTID samme høyde (6-korts rutenettet), uansett gruppe.
+     Da har hele gruppa konstant høyde, og klyngen over (logo + søk + bryter)
+     står helt stille når man bytter til «Annet» – ingen forskyvning. */
+  .board {
+    min-height: clamp(448px, 50vh, 452px);
+    /* Optisk sentrering: på vanlige skjermer (~1040 px) ingen forskyvning, men
+       på høye vinduer løftes hele komposisjonen litt opp så den ikke flyter
+       lavt med et stort tomrom i toppen. */
+    margin-bottom: clamp(0px, calc((100vh - 1040px) * 0.22), 96px);
+  }
   .board:not(.enkel) {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 300px));
     grid-auto-rows: minmax(120px, 186px);
     justify-content: center;
+    align-content: center;
     gap: clamp(14px, 1.8vw, 28px);
     flex: 0 1 auto; /* ikke vokse – da kan gruppa sentreres av auto-margene */
   }
@@ -745,6 +756,11 @@ mark {
   width: min(560px, 92vw);
   max-height: 84vh;
   box-shadow: var(--pop-shadow);
+  /* Løft kortet til sitt eget GPU-lag: den store skyggen og innholdet
+     rastreres én gang og komponeres under flukten, så inn/ut blir smørmyk
+     (ingen skygge-ommaling per bilde) – særlig ved lukking. */
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 /* Bredere kort bare når innholdet faktisk trenger to spalter */
