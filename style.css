@@ -596,17 +596,16 @@ mark {
      flaten over statuslinja: auto-margen over heroen og statuslinjas egen
      auto-marg deler den ledige høyden likt, så komposisjonen får jevn luft
      over og under i stedet for å henge i toppen med et hult tomrom på midten. */
-  .hero { margin-top: auto; }
+  /* Klyngen får et FAST, moderat toppmellomrom – aldri auto-sentrert. Ellers
+     deler sentreringen all ledig høyde likt, og på høyoppløste skjermer (høyt
+     CSS-vindu) vokser tomrommet i toppen så innholdet flyter langt ned. Med et
+     tak på toppmellomrommet står klyngen forankret oppe uansett oppløsning;
+     overskuddshøyde havner under tavla (statuslinja har margin-top: auto). */
+  .hero { margin-top: clamp(28px, 12vh, 152px); }
   /* Tavla reserverer ALLTID samme høyde (6-korts rutenettet), uansett gruppe.
      Da har hele gruppa konstant høyde, og klyngen over (logo + søk + bryter)
      står helt stille når man bytter til «Annet» – ingen forskyvning. */
-  .board {
-    min-height: clamp(448px, 50vh, 452px);
-    /* Optisk sentrering: på vanlige skjermer (~1040 px) ingen forskyvning, men
-       på høye vinduer løftes hele komposisjonen litt opp så den ikke flyter
-       lavt med et stort tomrom i toppen. */
-    margin-bottom: clamp(0px, calc((100vh - 1040px) * 0.22), 96px);
-  }
+  .board { min-height: clamp(448px, 50vh, 452px); }
   .board:not(.enkel) {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 300px));
